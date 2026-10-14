@@ -7,6 +7,27 @@
         "ShowPlayerListModeMixin",
         "SyncVerbosityMixin"
     ],
+    "client": [
+        "ChatScreenFocusAccessor",
+        "MenuSleeveRenderMixin",
+        "PublicChatSuggestionsMixin",
+        "ChatComposerAccessor",
+        "PublicChatScreenMixin",
+        "PublicChatMessagesMixin",
+        "ChatInputEmojiMixin",
+        "ListeningCardMixin",
+        "MenuGestureMixin",
+        "MenuArmCubeMixin",
+        "MentionSuggestionsMixin",
+        "RoundedChatMixin",
+        "RoundedChatComponentMixin",
+        "RoundedFocusedChatMixin",
+        "RoundedHudMixin",
+        "RoundedTabMixin",
+        "HdAvatarMixin",
+        "TransparentCapeMixin",
+        "ContainerPositionAccessor"
+    ],
     "injectors": {
         "defaultRequire": 1
     },

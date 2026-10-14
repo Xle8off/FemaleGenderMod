@@ -28,6 +28,12 @@ import com.wildfire.client.command.WildfireCommand;
 import com.wildfire.client.config.ClientConfig;
 import com.wildfire.client.gui.SyncedPlayerList;
 import com.wildfire.client.render.GenderRenderState;
+import com.wildfire.client.appearance.AppearanceState;
+import com.wildfire.neoforge.appearance.CapeClient;
+import com.wildfire.neoforge.appearance.GarmentClient;
+import com.wildfire.neoforge.appearance.HdSkinClient;
+import com.wildfire.neoforge.appearance.CosmeticLayer;
+import com.wildfire.neoforge.appearance.NeoAppearanceNetworking;
 import com.wildfire.client.render.debug.GenderDebugHudEntry;
 import com.wildfire.client.render.debug.PhysicsDebugHudEntry;
 import com.wildfire.client.resources.GenderArmorResourceManager;
@@ -63,12 +69,15 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.ExtractLevelRenderStateEvent;
+import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.client.event.RegisterDebugEntriesEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RenderNameTagEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -83,7 +92,13 @@ public class WildfireGenderClientNeo {
     private Set<SoundEvent> hurtSounds = Collections.emptySet();
 
     public WildfireGenderClientNeo(ModContainer modContainer, IEventBus modEventBus) {
+        com.wildfire.client.music.SpringPlusSession.configure(() -> {
+            var client = Minecraft.getInstance();
+            return client.player != null && client.level != null && client.isMultiplayerServer() && AppearanceState.isActive();
+        });
+        NeoAppearanceNetworking.register(modEventBus);
         WildfireGenderClient.tryMigrate();
+        AppearanceState.setGarmentTextures(GarmentClient::texture);
         ClientConfig.INSTANCE.load(modContainer);
 
         modEventBus.addListener(RegisterKeyMappingsEvent.class, this::registerKeybindings);
@@ -107,12 +122,52 @@ public class WildfireGenderClientNeo {
         });
         NeoForge.EVENT_BUS.addListener(RegisterClientCommandsEvent.class, this::registerClientCommands);
         NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingIn.class, _ -> WildfireClientEventHandler.clientJoin(Minecraft.getInstance()));
-        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, _ -> WildfireClientEventHandler.clientDisconnect());
+        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, _ -> {
+            AppearanceState.deactivate();
+            Minecraft.getInstance().execute(() -> {
+            com.wildfire.client.render.TorsoMotionPhysics.clear();
+            com.wildfire.client.music.SpotifyWebPlayer.disconnect();
+            com.wildfire.client.music.PersonalMusicPlayer.stop();
+            WildfireClientEventHandler.clientDisconnect();
+            AppearanceState.deactivate();
+            com.wildfire.neoforge.appearance.ModUpdate.reset();
+            com.wildfire.neoforge.appearance.MusicClient.clear();
+            com.wildfire.neoforge.appearance.SocialClient.clear();
+            com.wildfire.client.towns.TownsClient.reset();
+            com.wildfire.gui.ChatAvatars.clear();
+            com.wildfire.neoforge.appearance.NotificationPreferenceSync.reset();
+            com.wildfire.client.music.ListeningState.reset();
+            com.wildfire.neoforge.appearance.NeoAppearanceNetworking.resetSkinReady();
+            HdSkinClient.clearAll();
+            CapeClient.clearAll();
+            GarmentClient.clearAll();
+            CosmeticLayer.clearDynamicCache();
+            com.wildfire.neoforge.appearance.CosmeticCatalogClient.reset();
+            com.wildfire.neoforge.appearance.RelationshipClient.clear();
+            com.wildfire.neoforge.appearance.ChibiSkinClient.clear();
+            });
+        });
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, _ -> {
+            com.wildfire.client.music.SpringPlusSession.tick();
+            if (!com.wildfire.client.music.SpringPlusSession.enabled()) return;
+            com.wildfire.client.music.PersonalMusicPlayer.serverPlaying(com.wildfire.neoforge.appearance.MusicClient.serverActive());
+            com.wildfire.client.music.SpotifyWebPlayer.serverPlaying(com.wildfire.neoforge.appearance.MusicClient.serverActive());
             Minecraft minecraft = Minecraft.getInstance();
             WildfireClientEventHandler.onClientTick(minecraft);
             SyncedPlayerList.onTick(minecraft);
+            CapeClient.tick(minecraft);
+            com.wildfire.neoforge.appearance.CosmeticCatalogClient.tick();
+            com.wildfire.neoforge.appearance.ModUpdate.tick();
+            com.wildfire.neoforge.appearance.NeoAppearanceNetworking.tickSkinReady();
+            com.wildfire.neoforge.appearance.NotificationPreferenceSync.tick();
+            com.wildfire.neoforge.appearance.ListeningSync.tick();
         });
+        NeoForge.EVENT_BUS.addListener(ExtractLevelRenderStateEvent.class, CosmeticLayer::captureFirstPersonPet);
+        NeoForge.EVENT_BUS.addListener(SubmitCustomGeometryEvent.class, CosmeticLayer::submitFirstPersonPet);
+        NeoForge.EVENT_BUS.addListener(ScreenEvent.Init.Post.class, AppearanceInventoryButton::onInit);
+        NeoForge.EVENT_BUS.addListener(ScreenEvent.Init.Post.class, NotificationChatButton::onInit);
+        NeoForge.EVENT_BUS.addListener(ScreenEvent.Render.Pre.class, AppearanceInventoryButton::onRender);
+        NeoForge.EVENT_BUS.addListener(ScreenEvent.Render.Pre.class, NotificationChatButton::onRender);
         NeoForge.EVENT_BUS.addListener(EntityTickEvent.Post.class, event -> {
             if (event.getEntity() instanceof LivingEntity living && living.level().isClientSide()) {
                 WildfireClientEventHandler.onEntityTick(living);
@@ -159,12 +214,19 @@ public class WildfireGenderClientNeo {
     }
 
     private void registerOverlays(RegisterGuiLayersEvent event) {
-        event.registerAbove(VanillaGuiLayers.TAB_LIST, WildfireGender.id("player_list"), WildfireClientEventHandler::renderHud);
+        event.registerAbove(VanillaGuiLayers.TAB_LIST, WildfireGender.id("player_list"), (graphics, tickCounter) -> {
+            if (!com.wildfire.client.music.SpringPlusSession.enabled()) return;
+            WildfireClientEventHandler.renderHud(graphics, tickCounter);
+            com.wildfire.neoforge.appearance.ModUpdate.renderHud(graphics);
+            if (Minecraft.getInstance().player != null && Minecraft.getInstance().gui.screen() == null)
+                QuickHud.draw(graphics);
+        });
     }
 
     private void registerRenderStateModifiers(RegisterRenderStateModifiersEvent event) {
         event.registerEntityModifier(new TypeToken<LivingEntityRenderer<? extends LivingEntity, LivingEntityRenderState, ?>>() {
         }, (entity, renderState) -> {
+            if (!com.wildfire.client.music.SpringPlusSession.enabled()) return;
             if (renderState instanceof HumanoidRenderState state && EntityConfig.isSupportedEntity(entity)) {
                 var config = EntityConfigHolder.getEntity(entity);
                 state.setRenderData(NeoClientHelper.STATE, new GenderRenderState(config, entity, state, state.partialTick));
@@ -186,6 +248,7 @@ public class WildfireGenderClientNeo {
         EquipmentLayerRenderer equipmentRenderer = event.getContext().getEquipmentRenderer();
         for (final PlayerModelType skin : event.getSkins()) {
             WildfireClientEventHandler.addAvatarRenderLayers(event.getPlayerRenderer(skin), equipmentRenderer, LivingEntityRenderer::addLayer);
+            event.getPlayerRenderer(skin).addLayer(new CosmeticLayer(event.getPlayerRenderer(skin)));
             WildfireClientEventHandler.addAvatarRenderLayers(event.getMannequinRenderer(skin), equipmentRenderer, LivingEntityRenderer::addLayer);
         }
         //~ if >=26.2 'net.minecraft.world.entity.EntityType' -> 'net.minecraft.world.entity.EntityTypes'
@@ -195,7 +258,8 @@ public class WildfireGenderClientNeo {
     }
 
     private void onPlaySound(PlayLevelSoundEvent.AtEntity event) {
-        if (ClientConfig.config().overrides().disableSoundReplacement().get()) {
+        if (ClientConfig.config().overrides().disableSoundReplacement().get()
+            || !com.wildfire.client.config.CosmeticPreferences.modHurtSound()) {
             return;
         }
         Holder<SoundEvent> soundHolder = event.getSound();

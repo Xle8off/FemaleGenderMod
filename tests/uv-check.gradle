@@ -1,0 +1,124 @@
+allprojects { p ->
+ afterEvaluate {
+  if(p.path == ':26.2' || p.path == ':neoforge:26.2') {
+   def output = p.layout.buildDirectory.dir('uv-check')
+   def compile = p.tasks.register('compileUvCheck', JavaCompile) {
+    dependsOn p.tasks.named('classes')
+    source = files(p.rootProject.file('tests/CosmeticUvCheck.java'))
+    source p.rootProject.file('tests/CosmeticGeometryCheck.java')
+    source p.rootProject.file('tests/MusicAccountsCheck.java')
+    source p.rootProject.file('tests/SpotifyWebCheck.java')
+    source p.rootProject.file('tests/ToastStackCheck.java')
+    source p.rootProject.file('tests/ChatReactionsCheck.java')
+    source p.rootProject.file('tests/MenuArmPoseCheck.java')
+    source p.rootProject.file('tests/FriendListLayoutCheck.java')
+    source p.rootProject.file('tests/GroupInboxCheck.java')
+    source p.rootProject.file('tests/TownsClientCheck.java')
+    source p.rootProject.file('tests/PublicChatCheck.java')
+    source p.rootProject.file('tests/CampaignClientCheck.java')
+    source p.rootProject.file('tests/AvatarBatchCheck.java')
+    source p.rootProject.file('tests/PrivateStatusCheck.java')
+    source p.rootProject.file('tests/WebStickersCheck.java')
+    source p.rootProject.file('tests/StickerPreferencesCheck.java')
+    source p.rootProject.file('tests/TorsoAttachmentCheck.java')
+    if (p.path == ':neoforge:26.2') source p.rootProject.file('tests/EarlyNotificationLoadCheck.java')
+    classpath = p.sourceSets.main.runtimeClasspath
+    destinationDirectory = output
+    options.release = 25
+   }
+   p.tasks.register('checkPublicChat', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'PublicChatCheck'
+   }
+   p.tasks.register('checkCampaignClient', JavaExec) {
+     dependsOn compile
+     classpath = p.sourceSets.main.runtimeClasspath + files(output)
+     mainClass = 'CampaignClientCheck'
+   }
+   p.tasks.register('checkCosmeticUv', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'CosmeticUvCheck'
+    args p.path == ':26.2' ? 'com.wildfire.render.DynamicCosmetic' : 'com.wildfire.neoforge.appearance.DynamicCosmetic'
+    args p.rootProject.file('tests/fixtures/headphones-pack.json').absolutePath
+   }
+   p.tasks.register('checkCosmeticGeometry', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'CosmeticGeometryCheck'
+    args p.path == ':26.2' ? 'com.wildfire.render.DynamicCosmetic' : 'com.wildfire.neoforge.appearance.DynamicCosmetic'
+    args p.rootProject.file('tests/fixtures/horns-reference.json').absolutePath
+   }
+   p.tasks.register('checkMusicAccounts', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'com.wildfire.client.music.MusicAccountsCheck'
+   }
+   p.tasks.register('checkTorsoAttachment', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'TorsoAttachmentCheck'
+   }
+   p.tasks.register('checkToastStack', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'ToastStackCheck'
+    args p.path == ':26.2' ? 'com.wildfire.main.networking.appearance.ModUpdate' : 'com.wildfire.neoforge.appearance.ModUpdate'
+   }
+   p.tasks.register('checkChatReactions', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'ChatReactionsCheck'
+    args p.rootProject.file(p.path == ':26.2' ? 'src/main/resources' : 'common/src/main/resources').absolutePath
+   }
+   p.tasks.register('checkMenuArmPose', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'MenuArmPoseCheck'
+   }
+   p.tasks.register('checkFriendListLayout', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'FriendListLayoutCheck'
+   }
+   p.tasks.register('checkGroupInbox', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'GroupInboxCheck'
+   }
+   p.tasks.register('checkTownsClient', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'TownsClientCheck'
+   }
+   p.tasks.register('checkAvatarBatch', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'AvatarBatchCheck'
+   }
+   p.tasks.register('checkPrivateStatus', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'PrivateStatusCheck'
+    args p.path == ':26.2' ? 'com.wildfire.main.networking.appearance.PrivateMessageInbox' : 'com.wildfire.neoforge.appearance.PrivateMessageInbox'
+   }
+   p.tasks.register('checkWebStickers', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'com.wildfire.gui.WebStickersCheck'
+    args p.rootProject.file(p.path == ':26.2' ? 'src/main/resources' : 'common/src/main/resources').absolutePath
+   }
+   p.tasks.register('checkStickerPreferences', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'com.wildfire.gui.StickerPreferencesCheck'
+   }
+   if (p.path == ':neoforge:26.2') p.tasks.register('checkEarlyNotificationLoad', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'EarlyNotificationLoadCheck'
+   }
+  }
+ }
+}

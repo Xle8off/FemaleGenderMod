@@ -1,11 +1,11 @@
 # Mod Properties
-mod_version = "5.0.0-Beta.4"
+mod_version = "0.1.0-beta.202"
 mod_license = "LGPL-3.0"
 mod_id = "female_gender_mod"
-mod_description = "Adds extra customization options to the player model by adding breasts for a more feminine appearance"
+mod_description = "SpringPlus character customization: appearance, clothing, cosmetics, HD skins and capes."
 maven_group = "com.wildfire"
-mod_name = "Female Gender Mod"
-archives_base_name = "Female-Gender-Mod"
+mod_name = "SpringPlusCosmetics"
+archives_base_name = "SpringPlusCosmetics"
 java.version = 25
 
 authors = [
@@ -14,6 +14,7 @@ authors = [
     "pupnewfster"
 ]
 contributors = [
+    "Xle8 (SpringPlusCosmetics development and new features)",
     "Arcti_cc",
     "BluelightAmelia",
     "diademiemi",
@@ -56,8 +57,8 @@ publish.modrinth = "bcOsQHnC"
     dependencies.fabric_api = "0.152.1"
     dependencies.fabric_loader_version = "0.19.2"
     dependencies.neoform_timestamp = "2"
-    dependencies.neo_version = "26.2.0.64"
-    dependencies.min_neo_version = "26.2.0.64"
+    dependencies.neo_version = "26.2.0.63"
+    dependencies.min_neo_version = "26.2.0.63"
     publish.version_title = "26.2"
     publish.min_version = "26.2"
     publish.max_version = "latest"

@@ -1,0 +1,92 @@
+// Explicit protected release: gradlew -I scripts/obfuscate.gradle :26.2:obfuscateJar
+// NeoForge: :neoforge:26.2:obfuscateJar
+allprojects { p ->
+ afterEvaluate {
+  if (p.path != ':26.2' && p.path != ':neoforge:26.2') return
+  def tool = p.configurations.create('releaseObfuscator') {
+   canBeConsumed = false
+   canBeResolved = true
+  }
+  p.repositories.mavenCentral()
+  p.dependencies.add(tool.name, 'com.guardsquare:proguard-base:7.10.0')
+  def inputJar = p.tasks.named('jar')
+  inputJar.configure {
+   from(p.rootProject.file('LICENSE')) {
+    into 'META-INF/licenses'
+    rename { 'SpringPlus-LGPL-3.0.txt' }
+   }
+  }
+  def outputJar = p.layout.buildDirectory.file("protected/${p.name}-protected.jar")
+  def reports = p.layout.buildDirectory.dir('private-obfuscation')
+  p.tasks.register('obfuscateJar', JavaExec) {
+   notCompatibleWithConfigurationCache('Explicit release tool resolves loader classpath at execution time')
+   group = 'build'
+   description = 'Obfuscate release code; keep integration contracts and private crash mappings.'
+   dependsOn inputJar
+   classpath = tool
+   mainClass = 'proguard.ProGuard'
+   inputs.file(p.rootProject.file('scripts/obfuscation.pro'))
+   inputs.file(inputJar.flatMap { it.archiveFile })
+   inputs.files(p.sourceSets.main.compileClasspath)
+   outputs.file(outputJar)
+   outputs.dir(reports)
+   doFirst {
+    def reportDir = reports.get().asFile
+    reportDir.mkdirs()
+    outputJar.get().asFile.parentFile.mkdirs()
+    def argv = ['@' + p.rootProject.file('scripts/obfuscation.pro').absolutePath,
+     '-injars', inputJar.get().archiveFile.get().asFile.absolutePath,
+     '-outjars', outputJar.get().asFile.absolutePath,
+     '-printmapping', new File(reportDir, 'mapping.txt').absolutePath,
+     '-printseeds', new File(reportDir, 'seeds.txt').absolutePath]
+    p.sourceSets.main.compileClasspath.files.findAll { it.exists() }.each {
+     argv += ['-libraryjars', it.absolutePath + '(!com/wildfire/**,!module-info.class)']
+    }
+    new File(System.getProperty('java.home'), 'jmods').listFiles().findAll { it.name.endsWith('.jmod') }.each {
+     argv += ['-libraryjars', it.absolutePath + '(!**.jar;!module-info.class)']
+    }
+    setArgs(argv)
+   }
+  }
+  p.tasks.register('verifyProtectedJar') {
+   group = 'verification'
+   dependsOn p.tasks.named('obfuscateJar')
+   notCompatibleWithConfigurationCache('Release archive verification')
+   doLast {
+    def jar = new java.util.zip.ZipFile(outputJar.get().asFile)
+    try {
+     def requireClass = { String name ->
+      if (jar.getEntry(name.replace('.', '/') + '.class') == null)
+       throw new GradleException("Missing metadata class in protected JAR: " + name)
+     }
+     def json = new groovy.json.JsonSlurper()
+     def fabric = jar.getEntry('fabric.mod.json')
+     if (fabric != null) {
+      def metadata = json.parse(jar.getInputStream(fabric))
+      metadata.entrypoints.values().flatten().each { entry -> requireClass(entry instanceof Map ? entry.value : entry) }
+     }
+     jar.entries().findAll { it.name.endsWith('.mixins.json') }.each { entry ->
+      def config = json.parse(jar.getInputStream(entry))
+      ((config.mixins ?: []) + (config.client ?: []) + (config.server ?: [])).each { requireClass(config.package + '.' + it) }
+      if (config.plugin) requireClass(config.plugin)
+     }
+     if (!jar.entries().any { it.name.startsWith('sp/') && it.name.endsWith('.class') })
+      throw new GradleException('Implementation classes were not obfuscated')
+     if (!jar.entries().any { it.name.toLowerCase().contains('license') })
+      throw new GradleException('License notice missing')
+     if (jar.entries().any { it.name.endsWith('mapping.txt') || it.name.endsWith('.java') })
+      throw new GradleException('Private mappings or sources accidentally included')
+     println('Protected JAR verified: loader entrypoints, mixins, license, renamed implementation, no source/mapping leak')
+    } finally { jar.close() }
+   }
+  }
+  p.tasks.register('checkProtectedLoad', JavaExec) {
+   group = 'verification'
+   dependsOn p.tasks.named('verifyProtectedJar')
+   notCompatibleWithConfigurationCache('Release source-mode JVM smoke test')
+   classpath = p.files(outputJar) + (p.sourceSets.main.runtimeClasspath + p.sourceSets.main.compileClasspath).filter { it.isFile() && it.name.endsWith('.jar') }
+   mainClass = p.rootProject.file('scripts/ProtectedLoadCheck.java').absolutePath
+   args outputJar.get().asFile.absolutePath, new File(reports.get().asFile, 'mapping.txt').absolutePath
+  }
+ }
+}

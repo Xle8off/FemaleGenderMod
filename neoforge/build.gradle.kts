@@ -4,6 +4,11 @@ plugins {
     id("me.modmuss50.mod-publish-plugin")
 }
 
+dependencies {
+    implementation("javazoom:jlayer:1.0.1")
+    jarJar("javazoom:jlayer:1.0.1")
+}
+
 sourceSets.main {
     resources.srcDir("src/generated/resources")
 }
