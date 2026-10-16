@@ -137,7 +137,7 @@ public class WildfireLangProvider extends FabricLanguageProvider {
         add(builder, WildfireLang.CREDITS_GENERAL, "General");
         add(builder, WildfireLang.CREDITS_TRANSLATORS, "Translators");
 
-        add(builder, WildfireLang.PLAYER_LIST_TITLE, "Female Gender Mod");
+        add(builder, WildfireLang.PLAYER_LIST_TITLE, "SpringPlusCosmetics");
         add(builder, WildfireLang.PLAYER_LIST_SETTINGS, "Settings");
         add(builder, WildfireLang.PLAYER_LIST_SYNC_STATUS, "Sync Status");
         add(builder, WildfireLang.PLAYER_LIST_LOADING, "Loading Data...");
@@ -161,7 +161,7 @@ public class WildfireLangProvider extends FabricLanguageProvider {
         add(builder, WildfireLang.CUSTOMIZATION_PRESET_DELETE, "Delete");
         add(builder, WildfireLang.CUSTOMIZATION_DUAL_PHYSICS, "Dual-Physics: %1$s");
 
-        add(builder, WildfireLang.WARDROBE_TITLE, "Female Gender Mod");
+        add(builder, WildfireLang.WARDROBE_TITLE, "SpringPlusCosmetics");
         add(builder, WildfireLang.WARDROBE_PLAYERS_USING, "Synced Players:");
         add(builder, WildfireLang.WARDROBE_SLIDER_BREAST_SIZE, "Breast Size: %1$s%%");
         add(builder, WildfireLang.WARDROBE_SLIDER_SEPARATION, "Separation: %1$s");
@@ -202,7 +202,7 @@ public class WildfireLangProvider extends FabricLanguageProvider {
 
         add(builder, WildfireLang.CANCER_AWARENESS_TITLE, "Hey, it's Breast Cancer Awareness Month!");
 
-        add(builder, WildfireLang.FIRST_TIME_TITLE, "Welcome to the Female Gender Mod!");
+        add(builder, WildfireLang.FIRST_TIME_TITLE, "Welcome to SpringPlusCosmetics!");
         add(builder, WildfireLang.FIRST_TIME_DESCRIPTION, "Would you like to enable cloud server syncing for your gender settings? This feature allows other players to view your customized gender appearance, even if the server doesn't have the mod installed.");
         add(builder, WildfireLang.FIRST_TIME_NOTICE, "You can always change this setting later in the mod menu.");
         add(builder, WildfireLang.FIRST_TIME_ENABLE, "Enable Cloud Syncing");
@@ -284,7 +284,7 @@ public class WildfireLangProvider extends FabricLanguageProvider {
 
         add(builder, WildfireLang.HURT_SOUND_SUBTITLE, "Female Player Hurt");
 
-        add(builder, WildfireLang.KEY_CATEGORY, "Female Gender Mod");
+        add(builder, WildfireLang.KEY_CATEGORY, "SpringPlusCosmetics");
         add(builder, WildfireLang.KEY_CONFIG, "Female Gender Menu");
         add(builder, WildfireLang.KEY_TOGGLE, "Toggle Breast Rendering");
         add(builder, WildfireLang.TOAST_GET_STARTED, "Press %1$s to get started!");

@@ -2,14 +2,15 @@
     "schemaVersion": 1,
     "id": "wildfire_gender",
     "version": "${version}",
-    "name": "Female Gender Mod",
-    "description": "Adds extra customization options to the player model by adding breasts for a more feminine appearance",
+    "name": "SpringPlusCosmetics",
+    "description": "SpringPlus character customization: appearance, clothing, cosmetics, HD skins and capes.",
     "authors": [
         "WildfireRomeo",
         "celeste",
         "pupnewfster"
     ],
     "contributors": [
+        "Xle8 — SpringPlusCosmetics development and new features",
         "Arcti_cc",
         "BluelightAmelia",
         "diademiemi",

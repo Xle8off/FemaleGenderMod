@@ -20,6 +20,10 @@ package com.wildfire.mixins;
 
 import com.wildfire.events.EntityHurtSoundEvent;
 import com.wildfire.events.EntityTickEvent;
+import com.wildfire.client.config.CosmeticPreferences;
+import com.wildfire.main.WildfireGender;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -28,6 +32,7 @@ import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /// @apiNote Only applied on the client side
@@ -39,15 +44,20 @@ abstract class LivingEntityMixin extends Entity {
 
     // TODO would it be worth adding an extra @Inject to #animateDamage(float) to account for servers (namely hypixel)
     //		using DamageTiltS2CPacket instead of the standard entity damage packet?
-    @Inject(
+    @ModifyArg(
         method = "handleDamageEvent",
         at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/world/entity/LivingEntity;playSound(Lnet/minecraft/sounds/SoundEvent;FF)V"
-        )
+        ), index = 0
     )
-    public void wildfiregender$playGenderHurtSound(DamageSource damageSource, CallbackInfo ci) {
-        EntityHurtSoundEvent.EVENT.invoker().onHurt((LivingEntity)(Object)this, damageSource);
+    private SoundEvent wildfiregender$selectHurtSound(SoundEvent original) {
+        if (!level().isClientSide() || !CosmeticPreferences.modHurtSound()
+            || !((Object)this instanceof Player player)) return original;
+        var profile = WildfireGender.getPlayerById(player.getUUID());
+        if (profile == null || !profile.sounds().hurt().get()) return original;
+        var modSound = profile.gender().get().getHurtSound();
+        return modSound == null ? original : modSound;
     }
 
     @Inject(method = "tick", at = @At("TAIL"))

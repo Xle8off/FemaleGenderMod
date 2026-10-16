@@ -26,6 +26,10 @@ import com.wildfire.main.config.Configuration;
 import com.wildfire.main.contributors.Contributors;
 import com.wildfire.main.entitydata.PlayerConfigHolder;
 import com.wildfire.main.networking.WildfireSync;
+import com.wildfire.main.networking.appearance.ServerAppearanceSync;
+import com.wildfire.main.networking.appearance.HdSkinClient;
+import com.wildfire.main.networking.appearance.CapeClient;
+import com.wildfire.main.networking.appearance.GarmentClient;
 import com.wildfire.render.debug.GenderDebugHudEntry;
 import com.wildfire.render.debug.PhysicsDebugHudEntry;
 import com.wildfire.resources.GenderArmorResourceManager;
@@ -56,8 +60,12 @@ public class WildfireGenderClient implements ClientModInitializer {
 
         ClientConfig.load();
         WildfireSounds.register();
-        WildfireSync.registerClient();
+        ServerAppearanceSync.registerClient();
+        HdSkinClient.registerClient();
+        CapeClient.registerClient();
+        GarmentClient.registerClient();
         WildfireClientEventHandler.registerClientEvents();
+        com.wildfire.client.moderation.InFlowIntegration.register();
         ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloadListener(GenderArmorResourceManager.ID, GenderArmorResourceManager.INSTANCE);
         DebugScreenEntries.register(GenderDebugHudEntry.SELF, new GenderDebugHudEntry(true));
         DebugScreenEntries.register(GenderDebugHudEntry.OTHER, new GenderDebugHudEntry(false));
@@ -99,6 +107,9 @@ public class WildfireGenderClient implements ClientModInitializer {
 
     public static CompletableFuture<PlayerConfigHolder> loadGenderInfo(PlayerConfigHolder player, boolean markForSync, boolean bypassQueue) {
         return CompletableFuture.supplyAsync(() -> {
+            if (ServerAppearanceSync.isActive()) {
+                return player;
+            }
             var uuid = player.uuid;
             if(player.hasLocalConfig()) {
                 player.loadFromDisk(markForSync);
@@ -113,7 +124,7 @@ public class WildfireGenderClient implements ClientModInitializer {
                 }
                 // make sure the server we're connected to hasn't provided player data while we were fetching data from
                 // the sync server
-                if(data != null && player.syncStatus == PlayerConfigHolder.SyncStatus.UNKNOWN) {
+                if(data != null && !ServerAppearanceSync.isActive() && player.syncStatus == PlayerConfigHolder.SyncStatus.UNKNOWN) {
                     player.updateFromJson(data);
                     if(markForSync) {
                         player.needsSync = true;

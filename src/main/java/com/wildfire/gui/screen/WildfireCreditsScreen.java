@@ -180,8 +180,9 @@ public class WildfireCreditsScreen extends BaseWildfireScreen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        drawScrollingString(graphics, getTitle(), 0, height / 2 - 100, TextAlignment.CENTER, CommonColors.WHITE, graphics.guiWidth(), 5, false);
-        drawScrollingString(graphics, WildfireLang.CREDITS_DESCRIPTION.translate(), 0, height / 2 - 85, TextAlignment.CENTER, 0xFF888888, graphics.guiWidth(), 5, false);
+        drawScrollingString(graphics, getTitle(), 0, height / 2 - 125, TextAlignment.CENTER, CommonColors.WHITE, graphics.guiWidth(), 5, false);
+        drawScrollingString(graphics, Component.translatable("springpluscosmetics.credits.original"), 0, height / 2 - 111, TextAlignment.CENTER, 0xFFAAAAAA, graphics.guiWidth(), 5, false);
+        drawScrollingString(graphics, Component.translatable("springpluscosmetics.credits.springplus"), 0, height / 2 - 98, TextAlignment.CENTER, 0xFFFFA8E4, graphics.guiWidth(), 5, false);
 
         graphics.blitSprite(RenderPipelines.GUI_TEXTURED, BUTTON_CONTAINER, this.width / 2 - (190 / 2), navigationY, 190, 25);
         graphics.blitSprite(RenderPipelines.GUI_TEXTURED, TAB_CONTAINER, this.width / 2 - (190 / 2), navigationY + 28, 190, 25);

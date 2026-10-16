@@ -64,7 +64,7 @@ public class ModMenuIntegration implements ModMenuApi {
 
         @Override
         protected void addButtons(LinearLayout layout) {
-            layout.addChild(Button.builder(CommonComponents.GUI_OK, _ -> onClose()).build());
+            layout.addChild(com.wildfire.gui.FlatButtons.builder(CommonComponents.GUI_OK, _ -> onClose()).build());
         }
 
         @Override

@@ -3,7 +3,7 @@ import org.gradle.kotlin.dsl.register
 
 plugins {
     id("dev.kikugie.stonecutter")
-    id("net.fabricmc.fabric-loom") version "1.16-SNAPSHOT" apply false
+    id("net.fabricmc.fabric-loom") version "1.16.3" apply false
     id("me.modmuss50.mod-publish-plugin") version "1.1.0" apply false
 }
 

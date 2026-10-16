@@ -1,5 +1,5 @@
 {
-    "key.category.wildfire_gender.generic": "Wildfire's Female Gender Mod",
+    "key.category.wildfire_gender.generic": "SpringPlusCosmetics",
     "key.wildfire_gender.gender_menu": "Меню",
     "key.wildfire_gender.toggle": "Переключить визуализацию груди",
     "toast.wildfire_gender.get_started": "Нажмите %s чтобы начать!",
@@ -34,11 +34,13 @@
     "wildfire_gender.uv_editor.faces.front": "Передняя текстура",
 
     "wildfire_gender.credits.title": "Создатели мода",
+    "springpluscosmetics.credits.original": "Основа: Female Gender Mod — WildfireRomeo и команда",
+    "springpluscosmetics.credits.springplus": "SpringPlusCosmetics: доработки и новые функции — Xle8",
     "wildfire_gender.credits.description": "Это список замечательных людей которые помогали с разработкой мода!",
     "wildfire_gender.credits.general": "Общий",
     "wildfire_gender.credits.translators": "Переводчики",
 
-    "wildfire_gender.player_list.title": "Female Gender Mod",
+    "wildfire_gender.player_list.title": "SpringPlusCosmetics",
     "wildfire_gender.player_list.settings_button": "Настройки",
     "wildfire_gender.player_list.sync_status": "Состояние синхронизации",
     "wildfire_gender.player_list.state.loading": "Загрузка данных...",
@@ -106,7 +108,7 @@
 
     "wildfire_gender.cancer_awareness.title": "Эй, сегодня месяц повышения осведомленности о раке молочной железы!",
 
-    "wildfire_gender.first_time_setup.title": "Wildfire's Female Gender Mod",
+    "wildfire_gender.first_time_setup.title": "SpringPlusCosmetics",
     "wildfire_gender.first_time_setup.description": "Хотите включить синхронизацию с облачным сервером для ваших настроек пола? Эта функция позволяет другим игрокам просматривать ваш настроенный пол, даже если на сервере не установлен мод.",
     "wildfire_gender.first_time_setup.notice": "Эту настройку вы всегда сможете изменить в меню мода.",
     "wildfire_gender.first_time_setup.enable": "Включить синхронизацию",

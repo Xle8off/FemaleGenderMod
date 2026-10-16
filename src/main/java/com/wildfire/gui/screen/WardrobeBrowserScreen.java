@@ -21,6 +21,7 @@ package com.wildfire.gui.screen;
 import com.wildfire.gui.SyncedPlayerList;
 import com.wildfire.main.WildfireGender;
 import com.wildfire.main.WildfireLang;
+import com.wildfire.main.networking.appearance.ServerAppearanceSync;
 import com.wildfire.main.cloud.CloudSync;
 import com.wildfire.main.config.ClientConfig;
 import com.wildfire.main.config.enums.Gender;
@@ -72,11 +73,7 @@ public class WardrobeBrowserScreen extends BaseWildfireScreen {
     }
 
     public static BaseWildfireScreen create(LocalPlayer player, @Nullable Screen parent) {
-        if(ClientConfig.config().firstTimeLoad.get() && CloudSync.isAvailable()) {
-            return new WildfireFirstTimeSetupScreen(parent, player.getUUID());
-        } else {
-            return new WardrobeBrowserScreen(parent, player.getUUID());
-        }
+        return new WardrobeBrowserScreen(parent, player.getUUID());
     }
 
     public static void open(Minecraft client, LocalPlayer player) {
@@ -105,47 +102,6 @@ public class WardrobeBrowserScreen extends BaseWildfireScreen {
                 }));
 
         addButton(builder -> builder
-                .message(() -> plr.gender().get().getDisplayName())
-                .position(this.width / 2 - 130, this.height / 2 + 33)
-                .size(80, 15)
-                .onPress(_ -> {
-                    if (plr.gender().update(Gender::next)) {
-                        plr.save();
-                        rebuildWidgets();
-                    }
-                }));
-
-        addButton(builder -> builder
-                .message(() -> WildfireLang.GENERIC_ELLIPSIS_SUFFIX.translate(WildfireLang.APPEARANCE_SETTINGS_TITLE))
-                .position(this.width / 2 - 36, this.height / 2 - 63)
-                .size(157, 20)
-                .onPress(_ -> {
-                    //~ if >=26.2 'setScreen' -> 'gui.setScreen'
-                    client.gui.setScreen(new WildfireBreastCustomizationScreen(this, this.playerUUID));
-                })
-                .active(plr.gender().get().canHaveBreasts()));
-
-        addButton(builder -> {
-            builder.message(WildfireLang.CLOUD_SETTINGS::translate);
-            builder.position(this.width / 2 - 36, y + 30);
-            builder.size(24, 18);
-            builder.renderer((button, ctx, _, _, _) ->
-                ctx.blitSprite(RenderPipelines.GUI_TEXTURED, CLOUD_ICON, button.getX() + 2, button.getY() + 2, 20, 14)
-            );
-            builder.onPress(_ -> {
-                //~ if >=26.2 'setScreen' -> 'gui.setScreen'
-                client.gui.setScreen(new WildfireCloudSyncScreen(this, this.playerUUID));
-            });
-            var cloudUnavailable = CloudSync.unavailableReason();
-            if(cloudUnavailable != null) {
-                builder.tooltip(Tooltip.create(cloudUnavailable.text()));
-                builder.active(false);
-            } else {
-                builder.tooltip(Tooltip.create(WildfireLang.CLOUD_TOOLTIP.translate()));
-            }
-        });
-
-        addButton(builder -> builder
                 .message(() -> WildfireLang.GENERIC_ELLIPSIS_SUFFIX.translate(WildfireLang.CREDITS_TITLE))
                 .position(this.width / 2 + 2, this.height / 2 + 33)
                 .size(78, 15)
@@ -153,6 +109,22 @@ public class WardrobeBrowserScreen extends BaseWildfireScreen {
                     //~ if >=26.2 'setScreen' -> 'gui.setScreen'
                     client.gui.setScreen(new WildfireCreditsScreen(this, this.playerUUID));
                 }));
+
+        addButton(builder -> builder.message(() -> Component.literal("⚙"))
+            .position(this.width / 2 + 84, this.height / 2 + 33).size(22, 15)
+            .onPress(_ -> client.gui.setScreen(new CosmeticSettingsScreen(this, this.playerUUID))));
+
+        if (ServerAppearanceSync.isActive()) {
+            addButton(builder -> builder
+                .message(() -> Component.literal("Примерочная"))
+                .position(this.width / 2 + 2, this.height / 2 + 10)
+                .size(78, 18)
+                .onPress(_ -> {
+                    //~ if >=26.2 'client.setScreen' -> 'client.gui.setScreen'
+                    client.gui.setScreen(null);
+                    Objects.requireNonNull(client.player).connection.sendCommand("appearance");
+                }));
+        }
 
         /*this.addDrawableChild(new WildfireButton(this.width / 2 + 111, y - 63, 9, 9, Text.literal("X"),
             button -> close(), text -> GuiUtils.doneNarrationText()));*/

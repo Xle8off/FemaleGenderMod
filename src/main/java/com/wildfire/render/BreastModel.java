@@ -36,14 +36,23 @@ public class BreastModel extends Model<HumanoidRenderState> {
     });
 
     private final WildfireModelRenderer.ModelBox model;
+    private final float displacementX;
+    private final float displacementY;
 
     public BreastModel(WildfireModelRenderer.ModelBox model) {
+        this(model, 0f, 0f);
+    }
+
+    public BreastModel(WildfireModelRenderer.ModelBox model, float displacementX, float displacementY) {
         super(DUMMY_PART, RenderTypes::entityCutout);
         this.model = model;
+        this.displacementX = displacementX;
+        this.displacementY = displacementY;
     }
 
     @Override
     public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int light, int overlay, int color) {
-        WildfireModelRenderer.renderBox(model, poseStack.last(), vertexConsumer, light, overlay, color);
+        WildfireModelRenderer.renderBox(model, poseStack.last(), vertexConsumer, light, overlay, color,
+            displacementX, displacementY);
     }
 }

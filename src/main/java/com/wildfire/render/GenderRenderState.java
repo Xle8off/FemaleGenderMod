@@ -36,6 +36,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectUtil;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
 import org.jspecify.annotations.Nullable;
@@ -46,6 +47,7 @@ public class GenderRenderState {
     private static final RenderStateDataKey<GenderRenderState> STATE = RenderStateDataKey.create(() -> "GenderRenderState");
 
     public static void update(LivingEntity entity, HumanoidRenderState state, float partialTicks) {
+        if (!com.wildfire.client.music.SpringPlusSession.enabled()) return;
         if(EntityConfig.isSupportedEntity(entity)) {
             var config = EntityConfigHolder.getEntity(entity);
             state.setData(STATE, new GenderRenderState(config, entity, state, partialTicks));
@@ -53,6 +55,7 @@ public class GenderRenderState {
     }
 
     public static @Nullable GenderRenderState get(HumanoidRenderState state) {
+        if (!com.wildfire.client.music.SpringPlusSession.enabled()) return null;
         return state.getData(STATE);
     }
 
@@ -62,6 +65,8 @@ public class GenderRenderState {
     public final BreastPhysicsState rightBreastPhysics;
 
     public final float partialTicks;
+    public final java.util.UUID entityUUID;
+    public final @Nullable Avatar avatar;
 
     public final Gender gender;
     public final float bustSize;
@@ -82,6 +87,8 @@ public class GenderRenderState {
     public final @Nullable Component nametag;
 
     private GenderRenderState(EntityConfigHolder<?> entityConfig, LivingEntity entity, HumanoidRenderState entityState, float partialTicks) {
+        this.entityUUID = entity.getUUID();
+        this.avatar = entity instanceof Avatar value ? value : null;
         this.breasts = new BreastState(entityConfig.breasts());
         this.uniboob = entityConfig.breasts().physics().uniboob().get();
         BothBreastsPhysics breastPhysics = entityConfig.breastPhysics();

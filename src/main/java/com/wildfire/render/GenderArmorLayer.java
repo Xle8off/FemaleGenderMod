@@ -22,7 +22,10 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.wildfire.api.IBreastArmorTexture;
 import com.wildfire.main.WildfireGender;
 import com.wildfire.main.uvs.UVMap;
+import com.wildfire.main.networking.appearance.ServerAppearanceSync;
+import com.wildfire.main.networking.appearance.BreastShape;
 import com.wildfire.render.WildfireModelRenderer.BreastModelBox;
+import com.wildfire.render.WildfireModelRenderer.RoundedBreastModelBox;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
@@ -45,9 +48,11 @@ public class GenderArmorLayer<STATE extends HumanoidRenderState, MODEL extends H
     private final EquipmentLayerRenderer equipmentRenderer;
 
     @UnknownNullability("null until #resizeBox() is first called")
-    private BreastModelBox lBoobArmor, rBoobArmor;
+    private RoundedBreastModelBox lBoobArmor, rBoobArmor;
 
     private IBreastArmorTexture textureData = IBreastArmorTexture.DEFAULT;
+    private int previousShapeBucket = -1;
+    private BreastShape previousBreastShape;
 
     public GenderArmorLayer(RenderLayerParent<STATE, MODEL> render, EquipmentLayerRenderer equipmentRenderer) {
         super(render);
@@ -88,26 +93,27 @@ public class GenderArmorLayer<STATE extends HumanoidRenderState, MODEL extends H
 
     @Override
     protected void resizeBox(GenderRenderState state, float breastSize) {
-        if (lBoobArmor != null && rBoobArmor != null && Objects.equals(textureData, state.armor.texture())) {
+        int shapeBucket = Math.clamp(Math.round(breastSize * 1.5f * 40f), 0, 48);
+        BreastShape shape = ServerAppearanceSync.shape(state.entityUUID);
+        if (lBoobArmor != null && rBoobArmor != null && Objects.equals(textureData, state.armor.texture())
+                && previousShapeBucket == shapeBucket && previousBreastShape == shape) {
             return;
         }
 
         textureData = state.armor.texture();
+        previousShapeBucket = shapeBucket;
+        previousBreastShape = shape;
         Vector2ic texSize = textureData.textureSize();
         UVMap uvs = textureData.uvs();
+        float quantizedSize = shapeBucket / 40f;
 
-        lBoobArmor = new BreastModelBox(texSize.x(), texSize.y(), -4F, 0.0F, 0F, 4, 5, 3, 0.0F, uvs.left());
-        rBoobArmor = new BreastModelBox(texSize.x(), texSize.y(), 0, 0.0F, 0F, 4, 5, 3, 0.0F, uvs.right());
+        lBoobArmor = new RoundedBreastModelBox(texSize.x(), texSize.y(), -2F, quantizedSize, 0.10F, shape, uvs.left());
+        rBoobArmor = new RoundedBreastModelBox(texSize.x(), texSize.y(), 2F, quantizedSize, 0.10F, shape, uvs.right());
     }
 
     @Override
     protected void setupTransformations(STATE state, MODEL model, GenderRenderState genderState, PoseStack matrixStack, BreastSide side) {
         super.setupTransformations(state, model, genderState, matrixStack, side);
-        if (genderState.hasJacketLayer) {
-            matrixStack.translate(0, 0, -0.015f);
-            matrixStack.scale(1.05f, 1.05f, 1.05f);
-        }
-        matrixStack.translate(side.leftOrNegate(0.001f), 0.015f, -0.015f);
-        matrixStack.scale(1.05f, 1, 1);
+        matrixStack.translate(side.leftOrNegate(0.001f), 0.01f, -0.006f);
     }
 }

@@ -60,10 +60,7 @@ public class WildfireButton extends Button implements IFancyFontRenderer {
 
     @Override
     protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
-        int clr = 0x54444444;
-        if(this.isHoveredOrFocused()) clr = 0x54666666;
-        if(!active) clr = 0x54222222;
-        if(!transparent) graphics.fill(getX(), getY(), getRight(), getBottom(), clr);
+        if(!transparent) com.wildfire.gui.FlatButtons.plate(graphics,getX(),getY(),getWidth(),getHeight(),active,isHoveredOrFocused(),false,com.wildfire.gui.UiTheme.ACCENT);
 
         drawInner(graphics, mouseX, mouseY, partialTicks);
         if(isHovered()) {

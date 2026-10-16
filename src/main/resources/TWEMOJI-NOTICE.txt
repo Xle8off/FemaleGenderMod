@@ -1,0 +1,16 @@
+The bundled, unmodified emoji PNGs in assets/appearance_sync/textures/gui/emoji
+are Twemoji graphics by Twitter, Inc. and other contributors.
+Source: https://github.com/jdecked/twemoji
+Revision: b6b55fef1e8636b540a6d016a4729ca8cdf2e60b
+Graphics license: Creative Commons Attribution 4.0 International (CC BY 4.0).
+License: https://creativecommons.org/licenses/by/4.0/
+The full license is included as TWEMOJI-LICENSE-GRAPHICS.txt.
+No changes were made to the graphics. Display size is adjusted by the client.
+
+The full Unicode 17 picker additionally uses Twemoji v17.0.3 graphics, packed
+into 36px, alpha-weighted downsampled font atlases. Artwork is otherwise unchanged.
+Source: https://github.com/jdecked/twemoji/releases/tag/v17.0.3
+Unicode 17 sequences: https://www.unicode.org/Public/17.0.0/emoji/emoji-test.txt
+Russian labels and search keywords: Unicode CLDR (Unicode License v3),
+https://github.com/unicode-org/cldr-json
+See UNICODE-LICENSE.txt for the Unicode data license.

@@ -36,16 +36,27 @@ import com.wildfire.main.entitydata.EntityConfig;
 import com.wildfire.main.entitydata.EntityConfigHolder;
 import com.wildfire.main.entitydata.PlayerConfigHolder;
 import com.wildfire.main.networking.WildfireSync;
+import com.wildfire.main.networking.appearance.ServerAppearanceSync;
+import com.wildfire.main.networking.appearance.CosmeticCatalogClient;
+import com.wildfire.main.networking.appearance.ModUpdate;
+import com.wildfire.main.networking.appearance.SocialClient;
+import com.wildfire.main.networking.appearance.NotificationInbox;
+import com.wildfire.mixins.accessors.AbstractContainerScreenAccessor;
 import com.wildfire.render.GenderArmorLayer;
 import com.wildfire.render.GenderLayer;
 import com.wildfire.render.GenderRenderState;
 import com.wildfire.render.HolidayFeaturesRenderer;
+import com.wildfire.render.CosmeticLayer;
+import com.wildfire.physics.AnimatedTorsoPhysics;
 import java.util.function.Consumer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityRenderLayerRegistrationCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.networking.v1.PacketSender;
@@ -54,6 +65,12 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.KeyMapping.Category;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.ComponentPath;
+import net.minecraft.client.gui.navigation.FocusNavigationEvent;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.components.toasts.ToastManager;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.renderer.entity.ArmorStandRenderer;
@@ -74,6 +91,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.Nullable;
 
@@ -85,34 +103,159 @@ public final class WildfireClientEventHandler {//TODO: Move other classes to a c
     }
 
     private static final Category CATEGORY = Util.make(() -> KeyMapping.Category.register(WildfireGender.id("generic")));
-    public static final KeyMapping CONFIG_KEYBIND = Util.make(() -> {
-        KeyMapping keybind = new KeyMapping("key.wildfire_gender.gender_menu", InputConstants.KEY_H, CATEGORY);
-        KeyMappingHelper.registerKeyMapping(keybind);
-        return keybind;
-    });
     private static final KeyMapping TOGGLE_KEYBIND = Util.make(() -> {
         KeyMapping keybind = new KeyMapping("key.wildfire_gender.toggle", InputConstants.UNKNOWN.getValue(), CATEGORY);
         KeyMappingHelper.registerKeyMapping(keybind);
         return keybind;
     });
-    private static int timer = 0;
 
     /// Register all client-side events
     public static void registerClientEvents() {
+        com.wildfire.client.music.SpringPlusSession.configure(() -> {
+            var client = Minecraft.getInstance();
+            return client.player != null && client.level != null && client.isMultiplayerServer() && ServerAppearanceSync.isActive();
+        });
         ClientEntityEvents.ENTITY_UNLOAD.register(WildfireClientEventHandler::onEntityUnload);
         ClientTickEvents.END_CLIENT_TICK.register(WildfireClientEventHandler::onClientTick);
         ClientPlayConnectionEvents.DISCONNECT.register(WildfireClientEventHandler::clientDisconnect);
         ClientPlayConnectionEvents.JOIN.register(WildfireClientEventHandler::clientJoin);
         LivingEntityRenderLayerRegistrationCallback.EVENT.register(WildfireClientEventHandler::registerRenderLayers);
+        LevelRenderEvents.END_EXTRACTION.register(CosmeticLayer::captureFirstPersonPet);
+        LevelRenderEvents.COLLECT_SUBMITS.register(CosmeticLayer::submitFirstPersonPet);
         HudElementRegistry.attachElementAfter(
             VanillaHudElements.MISC_OVERLAYS,
             WildfireGender.id("player_list"),
             WildfireClientEventHandler::renderHud
         );
         ArmorStatsTooltipEvent.EVENT.register(WildfireClientEventHandler::renderTooltip);
-        EntityHurtSoundEvent.EVENT.register(WildfireClientEventHandler::onEntityHurt);
         EntityTickEvent.EVENT.register(WildfireClientEventHandler::onEntityTick);
         PlayerNametagRenderEvent.EVENT.register(WildfireClientEventHandler::onPlayerNametag);
+        ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
+            if (!com.wildfire.client.music.SpringPlusSession.enabled()) return;
+            if (screen instanceof ChatScreen) {
+                Screens.getWidgets(screen).add(com.wildfire.gui.screen.NotificationCenterScreen.hudPlayerWidget(screen));
+                addQuickButtons(client, screen, width);
+                return;
+            }
+            if (!(screen instanceof InventoryScreen || screen instanceof net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen)) return;
+            int x = ((AbstractContainerScreenAccessor) screen).wildfire$getLeftPos() + 129;
+            int y = height / 2 - 22;
+            var button = new AppearanceButton(x, y, _ -> {
+                if (client.player == null || !ServerAppearanceSync.isActive()) return;
+                client.player.connection.sendCommand("appearance");
+            });
+            if(screen instanceof net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen creative){
+                button.setX(((AbstractContainerScreenAccessor)screen).wildfire$getLeftPos()+145);
+                button.setY(((AbstractContainerScreenAccessor)screen).wildfire$getTopPos()+24);
+                button.visible=creative.isInventoryOpen();
+            }
+            button.active = ServerAppearanceSync.isActive();
+            button.setTooltip(Tooltip.create(button.active
+                ? Component.literal("Открыть кастомизацию персонажа")
+                : Component.literal("Кастомизация доступна только на сервере")
+                    .withStyle(style -> style.withColor(0xF3A5D8))
+                    .append(Component.literal("\n✦ SpringPlus.net ✦")
+                        .withStyle(style -> style.withColor(0xB691FF).withBold(true)))));
+            Screens.getWidgets(screen).add(button);
+            ScreenEvents.beforeExtract(screen).register((current, graphics, mouseX, mouseY, delta) -> {
+                button.setX(((AbstractContainerScreenAccessor) current).wildfire$getLeftPos() + 129);
+                button.setY(current.height / 2 - 22);
+                button.active = ServerAppearanceSync.isActive();
+                if(current instanceof net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen creative){
+                    button.setX(((AbstractContainerScreenAccessor)current).wildfire$getLeftPos()+145);
+                    button.setY(((AbstractContainerScreenAccessor)current).wildfire$getTopPos()+24);
+                    button.visible=creative.isInventoryOpen();button.active&=button.visible;
+                }
+            });
+        });
+    }
+
+    private static void addQuickButtons(Minecraft client, net.minecraft.client.gui.screens.Screen screen, int width) {
+        var notifications = new NotificationButton(10, 14, _ ->
+            client.gui.setScreen(new com.wildfire.gui.screen.NotificationCenterScreen(screen)));
+        notifications.setTooltip(Tooltip.create(Component.literal("Уведомления SpringPlus")));
+        Screens.getWidgets(screen).add(notifications);
+        var updateButton = new com.wildfire.client.music.UpdateHudButton(ModUpdate::updateHudState, ModUpdate::activateUpdateHud);
+        Screens.getWidgets(screen).add(updateButton);
+        if (screen instanceof ChatScreen) {
+            for (int slot = 0; slot < 3; slot++) {
+            final int toastSlot = slot;
+            final long[] displayedId = {-1};
+            Button primary = new com.wildfire.gui.ToastControlButton(10, 0, 100, 20, Component.empty(), button -> {
+                if (displayedId[0] != ModUpdate.popupId(toastSlot)) return;
+                var action = ModUpdate.popupAction(toastSlot);
+                if (action == null) return;
+                if ("message".equals(action.kind()) || "friend_message".equals(action.kind()))
+                    client.gui.setScreen(new com.wildfire.gui.screen.NotificationCenterScreen(screen, action.target()));
+                else if ("friend_request".equals(action.kind())) SocialClient.action("add", action.target());
+                else if ("notification".equals(action.kind())) {
+                    var center=new com.wildfire.gui.screen.NotificationCenterScreen(screen);
+                    center.openNotification(action.target()); client.gui.setScreen(center);
+                }
+                ModUpdate.dismissPopup(displayedId[0]);
+            },ModUpdate::popupControlsReveal);
+            Button secondary = new com.wildfire.gui.ToastControlButton(116, 0, 106, 20, Component.empty(), button -> {
+                if (displayedId[0] != ModUpdate.popupId(toastSlot)) return;
+                var action = ModUpdate.popupAction(toastSlot);
+                if (action == null) return;
+                if(!"notification".equals(action.kind()))SocialClient.action("message".equals(action.kind()) ? "add" : "reject", action.target());
+                ModUpdate.dismissPopup(displayedId[0]);
+            },ModUpdate::popupControlsReveal);
+            var dismiss=new com.wildfire.gui.ToastDismissButton(()->ModUpdate.popupId(toastSlot),
+                ()->ModUpdate.popupTop(toastSlot),ModUpdate::popupControlsReveal,ModUpdate::dismissPopup);
+            Screens.getWidgets(screen).add(dismiss);
+            Screens.getWidgets(screen).add(primary);
+            Screens.getWidgets(screen).add(secondary);
+            primary.visible = secondary.visible = false;
+            ScreenEvents.beforeExtract(screen).register((current, graphics, mouseX, mouseY, delta) -> {
+                dismiss.sync(current.width);
+                var action = ModUpdate.popupAction(toastSlot);
+                displayedId[0] = ModUpdate.popupId(toastSlot);
+                primary.visible = action != null;
+                secondary.visible = action != null && !"message".equals(action.kind()) && !"friend_message".equals(action.kind());
+                if (action == null) return;
+                primary.setWidth("friend_message".equals(action.kind()) ? 160 : 100);
+                primary.setX(secondary.visible ? 10 : 10 + (212 - primary.getWidth()) / 2);
+                primary.setY(ModUpdate.popupActionY(toastSlot));
+                secondary.setY(ModUpdate.popupActionY(toastSlot));
+                primary.setMessage(Component.literal("friend_message".equals(action.kind()) ? "Написать сообщение" : "notification".equals(action.kind()) ? "Посмотреть" : "message".equals(action.kind()) ? "Ответить" : "Принять"));
+                secondary.setMessage(Component.literal("notification".equals(action.kind()) ? "Закрыть" : "message".equals(action.kind()) ? "В друзья" : "Отклонить"));
+            });
+            }
+        }
+        ScreenEvents.beforeExtract(screen).register((current, graphics, mouseX, mouseY, delta) -> {
+            boolean bellVisible = (current instanceof ChatScreen || com.wildfire.client.config.CosmeticPreferences.hudBell()) && !ModUpdate.popupVisible();
+            notifications.visible = bellVisible;
+            notifications.setY(14 + ModUpdate.topInset());
+            updateButton.sync(38 + ModUpdate.topInset(),
+                com.wildfire.client.music.SpringPlusSession.enabled() && !ModUpdate.popupVisible());
+            if (current instanceof ChatScreen) com.wildfire.gui.QuickHud.drawTrack(graphics);
+        });
+    }
+
+    private static final class AppearanceButton extends Button {
+        private static final ItemStack ICON = new ItemStack(Items.ARMOR_STAND);
+
+        private AppearanceButton(int x, int y, OnPress onPress) {
+            super(x, y, 20, 18, Component.literal("Образ"), onPress, DEFAULT_NARRATION);
+        }
+
+        @Override
+        protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+            com.wildfire.gui.FlatButtons.plate(graphics,getX(),getY(),getWidth(),getHeight(),active,isHoveredOrFocused(),false,com.wildfire.gui.UiTheme.ACCENT);
+            graphics.item(ICON, getX() + 2, getY() + 1);
+        }
+    }
+
+    private static final class NotificationButton extends com.wildfire.client.music.ChatOverlayButton {
+        private NotificationButton(int x, int y, OnPress onPress) {
+            super(x, y, 20, 20, Component.literal("Уведомления"), onPress);
+        }
+        @Override public ComponentPath nextFocusPath(FocusNavigationEvent event) { return null; }
+        @Override protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+            com.wildfire.gui.FlatButtons.plate(graphics,getX(),getY(),getWidth(),getHeight(),active,isHoveredOrFocused(),false,com.wildfire.gui.UiTheme.ACCENT);
+            com.wildfire.gui.QuickHud.drawBellIcon(graphics, getX(), getY());
+        }
     }
 
     private static void onPlayerNametag(AvatarRenderState state, PoseStack matrixStack, Consumer<Component> renderHelper) {
@@ -173,7 +316,10 @@ public final class WildfireClientEventHandler {//TODO: Move other classes to a c
     }
 
     private static void renderHud(GuiGraphicsExtractor context, DeltaTracker tickCounter) {
+        if (!com.wildfire.client.music.SpringPlusSession.enabled()) return;
+        ModUpdate.renderHud(context);
         var client = Minecraft.getInstance();
+        if (client.player != null && client.gui.screen() == null) com.wildfire.gui.QuickHud.draw(context);
         //~ if >=26.2 'client.screen' -> 'client.gui.screen()'
         if (client.gui.screen() instanceof WardrobeBrowserScreen) {
             SyncedPlayerList.resetTimer();
@@ -195,6 +341,7 @@ public final class WildfireClientEventHandler {//TODO: Move other classes to a c
             registrationHelper.register(new GenderLayer<>(playerRenderer));
             registrationHelper.register(new GenderArmorLayer<>(playerRenderer, context.getEquipmentRenderer()));
             registrationHelper.register(new HolidayFeaturesRenderer(playerRenderer));
+            registrationHelper.register(new CosmeticLayer(playerRenderer));
         } else if (entityRenderer instanceof ArmorStandRenderer armorStandRenderer) {
             registrationHelper.register(new GenderArmorLayer<>(armorStandRenderer, context.getEquipmentRenderer()));
         }
@@ -209,53 +356,41 @@ public final class WildfireClientEventHandler {//TODO: Move other classes to a c
 
     /// Perform various actions that should happen once per client tick, such as syncing client player settings to the server.
     private static void onClientTick(Minecraft client) {
+        com.wildfire.client.music.SpringPlusSession.tick();
+        if (!com.wildfire.client.music.SpringPlusSession.enabled()) return;
+        com.wildfire.client.music.PersonalMusicPlayer.serverPlaying(com.wildfire.main.networking.appearance.MusicClient.serverActive());
+        com.wildfire.client.music.SpotifyWebPlayer.serverPlaying(com.wildfire.main.networking.appearance.MusicClient.serverActive());
         if (client.level == null || client.player == null) {
             return;
         }
-        timer++;
-
-        if (timer % 5 == 0) {
-            PlayerConfigHolder clientConfig = WildfireGender.getPlayerById(client.player.getUUID());
-            // Only attempt to sync if the server will accept the packet, and only once every 5 ticks, or around 4 times a second
-            if (client.isMultiplayerServer() && clientConfig != null) {
-                // sendToServer will only actually send a packet if any changes have been made that need to be synced, or if we haven't synced before.
-                WildfireSync.sendToServer(client.player, clientConfig);
-            }
-            if (timer % 40 == 0) {//All timers that are divisible by 40 will be divisible by 5, so we may as well put it within the outer if statement
-                CloudSync.sendNextQueueBatch();
-                if (clientConfig != null) {
-                    clientConfig.attemptCloudSync();
-                }
-            }
-        }
-
+        CosmeticCatalogClient.tick();
+        ModUpdate.tick();
+        ServerAppearanceSync.tickSkinReady();
+        com.wildfire.main.networking.appearance.NotificationPreferenceSync.tick();
+        com.wildfire.main.networking.appearance.ListeningSync.tick();
         //~ if >=26.2 'client.screen' -> 'client.gui.screen()' {
         if (TOGGLE_KEYBIND.consumeClick() && client.gui.screen() == null) {
             ClientConfig.RENDER_BREASTS ^= true;
-        }
-        if (CONFIG_KEYBIND.consumeClick() && client.gui.screen() == null) {
-            WardrobeBrowserScreen.open(client, client.player);
         }
         //~}
     }
 
     /// Clears all caches when the client player disconnects from a server/closes a singleplayer world
     private static void clientDisconnect(ClientPacketListener networkHandler, Minecraft client) {
+        com.wildfire.client.music.SpotifyWebPlayer.disconnect();
+        com.wildfire.client.music.PersonalMusicPlayer.stop();
         WildfireGender.CACHE.invalidateAll();
         EntityConfigHolder.CACHE.invalidateAll();
+        AnimatedTorsoPhysics.clear();
+        com.wildfire.client.render.TorsoMotionPhysics.clear();
+        com.wildfire.main.networking.appearance.MusicClient.clear();
+        com.wildfire.main.networking.appearance.SocialClient.clear();
+        com.wildfire.main.networking.appearance.NotificationPreferenceSync.reset();
+        com.wildfire.client.music.ListeningState.reset();
     }
 
     private static void clientJoin(ClientPacketListener var1, PacketSender var2, Minecraft client) {
-        if (client.player == null) {
-            return;
-        }
-
-        if (ClientConfig.config().showToast.get()) {
-            var button = CONFIG_KEYBIND.getTranslatedKeyMessage();
-            //~ if >=26.2 'client.getToastManager()' -> 'client.gui.toastManager()'
-            ToastManager toastManager = client.gui.toastManager();
-            toastManager.addToast(new WildfireToast(Minecraft.getInstance().font, WildfireLang.PLAYER_LIST_TITLE.translate(), WildfireLang.TOAST_GET_STARTED.translate(button)));
-        }
+        // The server sync plugin is the only component allowed to open customization.
     }
 
     /// Play the relevant mod hurt sound when a player takes damage
@@ -269,7 +404,8 @@ public final class WildfireClientEventHandler {//TODO: Move other classes to a c
         }
 
         PlayerConfigHolder genderPlayer = WildfireGender.getPlayerById(player.getUUID());
-        if (genderPlayer == null || !genderPlayer.sounds().hurt().get()) {
+        if (genderPlayer == null || !genderPlayer.sounds().hurt().get()
+            || !com.wildfire.client.config.CosmeticPreferences.modHurtSound()) {
             return;
         }
 

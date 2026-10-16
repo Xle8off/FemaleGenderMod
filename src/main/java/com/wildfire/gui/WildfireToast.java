@@ -98,7 +98,7 @@ public class WildfireToast implements Toast, IFancyFontRenderer {
         if(client.gui.screen() instanceof BaseWildfireScreen) {
             return true;
         }
-        return WildfireClientEventHandler.CONFIG_KEYBIND.isDown();
+        return false;
     }
 
     public void hide() {

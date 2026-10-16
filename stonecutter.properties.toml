@@ -1,29 +1,23 @@
-loader_version = "0.19.2"
+loader_version = "0.19.3"
 
 # Mod Properties
-mod_version = "5.0.0-Beta.4"
+mod_version = "0.1.0-beta.210"
 maven_group = "com.wildfiregender.main"
-archives_base_name = "Female-Gender-Mod"
+archives_base_name = "SpringPlusCosmetics-fabric"
 
 # Note that mod menu may be several versions out of date; this is fine, as we only care about using this
 # for its API, which shouldn't realistically need to be updated often (if ever).
 dependencies.modmenu = "18.0.0-alpha.6"
+dependencies.playeranimlib = "1.2.6+mc.26.2"
 debug.load_modmenu = false
 
 publish.type = "BETA"
 # TODO setup curseforge publishing
 publish.modrinth = "bcOsQHnC"
 
-["26.1"]
-    dependencies.minecraft = ">=26.1 <26.2"
-    dependencies.fabric = "0.144.3+26.1"
-    publish.version_title = "26.1.x"
-    publish.min_version = "26.1"
-    publish.max_version = "26.1.2"
-
 ["26.2"]
     dependencies.minecraft = ">=26.2 <26.3"
-    dependencies.fabric = "0.152.1+26.2"
+    dependencies.fabric = "0.156.0+26.2"
     publish.version_title = "26.2"
     publish.min_version = "26.2"
     publish.max_version = "latest"

@@ -24,20 +24,28 @@ import com.wildfire.main.WildfireGender;
 import com.wildfire.main.WildfireHelper;
 import com.wildfire.main.config.ClientConfig;
 import com.wildfire.main.entitydata.BreastState;
+import com.wildfire.main.networking.appearance.ServerAppearanceSync;
+import com.wildfire.main.networking.appearance.BreastShape;
+import com.wildfire.main.networking.appearance.GarmentClient;
 import com.wildfire.main.uvs.UVLayout;
 import com.wildfire.mixins.accessors.LivingEntityRendererAccessor;
 import com.wildfire.render.WildfireModelRenderer.BreastModelBox;
+import com.wildfire.render.WildfireModelRenderer.ModelBox;
 import com.wildfire.render.WildfireModelRenderer.OverlayModelBox;
+import com.wildfire.render.WildfireModelRenderer.RoundedBreastModelBox;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
+import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.util.CommonColors;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.EquipmentSlot;
 import org.jetbrains.annotations.UnknownNullability;
 import org.joml.Quaternionf;
 
@@ -52,12 +60,16 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
     private static final BreastSide[] BREAST_SIDES = BreastSide.values();
 
     @UnknownNullability("null until #resizeBox() is first called")
-    private BreastModelBox lBreast, rBreast;
+    private ModelBox lBreast, rBreast;
     @UnknownNullability("null until #resizeBox() is first called")
-    private OverlayModelBox lBreastWear, rBreastWear;
+    private ModelBox lBreastWear, rBreastWear;
+    @UnknownNullability("null until #resizeBox() is first called")
+    private ModelBox lBreastShirt, rBreastShirt;
 
     private @Nullable UVLayout prevLeftBreastUVLayout, prevRightBreastUVLayout,
         prevLeftBreastOverlayUVLayout, prevRightBreastOverlayUVLayout;
+    private int previousShapeBucket = -1;
+    private BreastShape previousBreastShape;
 
     private final RenderLayerParent<STATE, MODEL> context;
 
@@ -91,6 +103,7 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
     /// @return `true` if rendering should continue
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     protected boolean setupRender(STATE entityState, GenderRenderState genderState) {
+        if (!com.wildfire.client.music.SpringPlusSession.enabled()) return false;
         if(!ClientConfig.RENDER_BREASTS) return false;
 
         boolean armorPhysicsOverride = ClientConfig.config().armorPhysicsOverride.get();
@@ -147,6 +160,7 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
         breastSize += 0.5f * Math.abs(bSize - 0.7f) * 2f; // Adjust breastSize based on bSize
 
         float resistance = Math.clamp(genderState.armor.physicsResistance(), 0, 1);
+        softPhysicsScale = armorPhysicsOverride ? 1f : 1f - resistance;
         breathingAnimation = (armorPhysicsOverride || resistance <= 0.5F) && genderState.isBreathing;
         bounceEnabled = genderState.hasBreastPhysics && (!isChestplateOccupied || resistance < 1); //oh, you found this?
         return true;
@@ -157,35 +171,62 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
     }
 
     protected void resizeBox(GenderRenderState state, float breastSize) {
+        int shapeBucket = Math.clamp(Math.round(breastSize * 40f), 0, 32);
+        BreastShape shape = ServerAppearanceSync.shape(state.entityUUID);
         //TODO: Better way for this?
         if(!Objects.equals(this.prevLeftBreastUVLayout, state.leftBreastUVLayout)
                 || !Objects.equals(this.prevRightBreastUVLayout, state.rightBreastUVLayout)
                 || !Objects.equals(this.prevLeftBreastOverlayUVLayout, state.leftBreastOverlayUVLayout)
-                || !Objects.equals(this.prevRightBreastOverlayUVLayout, state.rightBreastOverlayUVLayout)) {
+                || !Objects.equals(this.prevRightBreastOverlayUVLayout, state.rightBreastOverlayUVLayout)
+                || previousShapeBucket != shapeBucket || previousBreastShape != shape) {
 
             this.prevLeftBreastUVLayout = state.leftBreastUVLayout;
             this.prevRightBreastUVLayout = state.rightBreastUVLayout;
             this.prevLeftBreastOverlayUVLayout = state.leftBreastOverlayUVLayout;
             this.prevRightBreastOverlayUVLayout = state.rightBreastOverlayUVLayout;
+            this.previousShapeBucket = shapeBucket;
+            this.previousBreastShape = shape;
 
-            this.lBreast = new BreastModelBox(64, 64, -4F, 0.0F, 0F, 4, 5, 3, 0.0F, state.leftBreastUVLayout);
-            this.rBreast = new BreastModelBox(64, 64, 0F, 0.0F, 0F, 4, 5, 3, 0.0F, state.rightBreastUVLayout);
-            this.lBreastWear = new OverlayModelBox(64, 64, -4F, 0.0F, 0F, 4, 5, 3, 0.0F, state.leftBreastOverlayUVLayout);
-            this.rBreastWear = new OverlayModelBox(64, 64, 0, 0.0F, 0F, 4, 5, 3, 0.0F, state.rightBreastOverlayUVLayout);
+            if (shape == BreastShape.LEGACY) {
+                // Preserve the original FemaleGenderMod geometry exactly. The familiar
+                // wedge profile comes from rotating these two 4x5x3 cuboids in setupTransformations.
+                this.lBreast = new BreastModelBox(64, 64, -4F, 0F, 0F, 4, 5, 3, 0F, state.leftBreastUVLayout);
+                this.rBreast = new BreastModelBox(64, 64, 0F, 0F, 0F, 4, 5, 3, 0F, state.rightBreastUVLayout);
+                this.lBreastWear = new OverlayModelBox(64, 64, -4F, 0F, 0F, 4, 5, 3, 0F, state.leftBreastOverlayUVLayout);
+                this.rBreastWear = new OverlayModelBox(64, 64, 0F, 0F, 0F, 4, 5, 3, 0F, state.rightBreastOverlayUVLayout);
+                this.lBreastShirt = new OverlayModelBox(64, 64, -4F, 0F, 0F, 4, 5, 3, 0.38F, state.leftBreastOverlayUVLayout);
+                this.rBreastShirt = new OverlayModelBox(64, 64, 0F, 0F, 0F, 4, 5, 3, 0.38F, state.rightBreastOverlayUVLayout);
+            } else {
+                float quantizedSize = shapeBucket / 40f;
+                this.lBreast = new RoundedBreastModelBox(64, 64, -2F, quantizedSize, 0F, shape, state.leftBreastUVLayout);
+                this.rBreast = new RoundedBreastModelBox(64, 64, 2F, quantizedSize, 0F, shape, state.rightBreastUVLayout);
+                this.lBreastWear = new RoundedBreastModelBox(64, 64, -2F, quantizedSize, 0.035F, shape, state.leftBreastOverlayUVLayout);
+                this.rBreastWear = new RoundedBreastModelBox(64, 64, 2F, quantizedSize, 0.035F, shape, state.rightBreastOverlayUVLayout);
+                // The shirt torso leaves the bust area open, so this cloth can
+                // follow the actual breast mesh instead of floating in front of it.
+                this.lBreastShirt = new RoundedBreastModelBox(64, 64, -2F, quantizedSize, 0.12F, 0F, shape, state.leftBreastOverlayUVLayout, true);
+                this.rBreastShirt = new RoundedBreastModelBox(64, 64, 2F, quantizedSize, 0.12F, 0F, shape, state.rightBreastOverlayUVLayout, true);
+            }
         }
     }
 
+    private float deformationX, deformationY;
+    private float softPhysicsScale;
+
     protected void setupTransformations(STATE state, MODEL model, GenderRenderState genderState, PoseStack matrixStack, BreastSide side) {
+        BreastShape attachmentShape = ServerAppearanceSync.shape(genderState.entityUUID);
+        boolean softMesh = attachmentShape != BreastShape.LEGACY && attachmentShape != BreastShape.BLOCKS
+            && attachmentShape != BreastShape.CONNECTED_BLOCKS;
+        deformationX = 0f;
+        deformationY = 0f;
         if(state.isBaby) {
             matrixStack.scale(state.ageScale, state.ageScale, state.ageScale);
             matrixStack.translate(0f, 0.75f, 0f);
         }
 
-        model.root().translateAndRotate(matrixStack);
-        ModelPart body = model.body;
-        body.translateAndRotate(matrixStack);
+        com.wildfire.client.render.TorsoAttachment.apply(matrixStack, model.root(), model.body);
 
-        if(bounceEnabled) {
+        if(bounceEnabled && !softMesh) {
             matrixStack.translate(side.forSide(lPhysPositionX, rPhysPositionX) / 32f, side.forSide(lPhysPositionY, rPhysPositionY) / 32f, 0);
         }
 
@@ -194,7 +235,7 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
         if(!isUniboob) {
             matrixStack.translate(side.leftOrNegate(-0.0625f * 2), 0, 0);
         }
-        if(bounceEnabled) {
+        if(bounceEnabled && !softMesh) {
             matrixStack.mulPose(Axis.YP.rotationDegrees(side.forSide(lPhysBounceRotation, rPhysBounceRotation)));
         }
         if(!isUniboob) {
@@ -202,7 +243,7 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
         }
 
         float rotation = breastSize;
-        if(bounceEnabled) {
+        if(bounceEnabled && !softMesh) {
             matrixStack.translate(0, -0.035f * breastSize, 0); //shift down to correct position
             rotation -= side.forSide(lPhysPositionY, rPhysPositionY) / 12f;
         }
@@ -214,9 +255,13 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
             matrixStack.translate(0, 0, 0.01f);
         }
 
+        BreastShape selectedShape = ServerAppearanceSync.shape(genderState.entityUUID);
+        float profileAngle = selectedShape == BreastShape.LEGACY ? 35f
+            : selectedShape == BreastShape.BLOCKS || selectedShape == BreastShape.CONNECTED_BLOCKS ? 0f : 9f;
+        float appliedOutwardAngle = selectedShape == BreastShape.CONNECTED_BLOCKS ? 0f : outwardAngle;
         Quaternionf rotationTransform = side.forSide(Axis.YP, Axis.YN)
-            .rotationDegrees(outwardAngle)
-            .rotateX(-35f * rotation * Mth.DEG_TO_RAD);
+            .rotationDegrees(appliedOutwardAngle)
+            .rotateX(-profileAngle * rotation * Mth.DEG_TO_RAD);
 
         if(breathingAnimation) {
             float f5 = -Mth.cos(state.ageInTicks * 0.09F) * 0.45F + 0.45F;
@@ -224,6 +269,28 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
         }
 
         matrixStack.mulPose(rotationTransform);
+        if (bounceEnabled) {
+            var motion = com.wildfire.client.render.TorsoMotionPhysics.sample(
+                genderState.entityUUID, model.root(), model.body, state.ageInTicks);
+            if (softMesh) {
+                var emote = com.wildfire.client.render.EmoteMotionBridge.read(state, genderState.partialTicks);
+                var independent = com.wildfire.client.render.IndependentBreastMotion.sample(
+                    genderState.entityUUID, state.ageInTicks,
+                    state.bodyRot * Mth.DEG_TO_RAD + (emote == null
+                        ? model.root().yRot + model.body.yRot : emote.yaw()),
+                    emote == null ? model.root().xRot + model.body.xRot : emote.pitch(),
+                    emote == null ? model.root().zRot + model.body.zRot : emote.roll(),
+                    lPhysPositionX, lPhysPositionY, rPhysPositionX, rPhysPositionY,
+                    emote == null ? model.root().x + model.body.x : emote.x(),
+                    emote == null ? model.root().y + model.body.y : emote.y());
+                var movement = isUniboob ? independent.left() : side.forSide(independent.left(), independent.right());
+                deformationX = movement.x() * softPhysicsScale;
+                deformationY = movement.y() * softPhysicsScale;
+            } else {
+                matrixStack.mulPose(Axis.XP.rotationDegrees(motion.pitch()));
+                matrixStack.mulPose(Axis.ZP.rotationDegrees(side.leftOrNegate(motion.roll())));
+            }
+        }
         matrixStack.scale(0.9995f, 1f, 1f); //z-fighting FIXXX
     }
 
@@ -246,13 +313,22 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
         //Note: While the living entity renderer uses the light coords, we mirror Deadmau5EarsLayer and use the passed in light coords
         // (which the renderer passes the state's light coords in, but we might as well be consistent with how vanilla does extra body parts as a layer)
         var model = side.forSide(lBreast, rBreast);
-        nodeCollector.submitModel(new BreastModel(model), state, poseStack, type, lightCoords, overlayCoords, baseColor, null, state.outlineColor, null);
+        nodeCollector.submitModel(new BreastModel(model, deformationX, deformationY), state, poseStack, type, lightCoords, overlayCoords, baseColor, null, state.outlineColor, null);
 
         if (genderState.hasJacketLayer) {
-            poseStack.translate(0, 0, -0.015f);
-            poseStack.scale(1.05f, 1.05f, 1.05f);
             var jacketModel = side.forSide(lBreastWear, rBreastWear);
-            nodeCollector.order(1).submitModel(new BreastModel(jacketModel), state, poseStack, type, lightCoords, overlayCoords, baseColor, null, state.outlineColor, null);
+            nodeCollector.order(1).submitModel(new BreastModel(jacketModel, deformationX, deformationY), state, poseStack, type, lightCoords, overlayCoords, baseColor, null, state.outlineColor, null);
+        }
+
+        int shirt = ServerAppearanceSync.cosmetics(genderState.entityUUID).shirt();
+        var custom = GarmentClient.texture(genderState.entityUUID, 0);
+        if ((shirt != 0 || custom != null) && !HumanoidArmorLayer.shouldRender(state.chestEquipment, EquipmentSlot.CHEST)) {
+            int color = custom == null ? CosmeticLayer.shirtColor(shirt) : 0xFFFFFFFF;
+            if (forceTransparent) color = (color & 0x00FFFFFF) | 0x26000000;
+            var shirtModel = side.forSide(lBreastShirt, rBreastShirt);
+            nodeCollector.order(2).submitModel(new BreastModel(shirtModel, deformationX, deformationY), state, poseStack,
+                RenderTypes.entityCutout(custom == null ? CosmeticLayer.FABRIC : custom), lightCoords, overlayCoords,
+                color, null, state.outlineColor, null);
         }
     }
 

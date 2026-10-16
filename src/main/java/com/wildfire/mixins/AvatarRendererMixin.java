@@ -24,6 +24,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.wildfire.events.PlayerNametagRenderEvent;
 import com.wildfire.main.LoaderAgnostics;
 import com.wildfire.main.config.ClientConfig;
+import com.wildfire.main.networking.appearance.HdSkinClient;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -39,10 +40,15 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /// @apiNote Only applied on the client side
-@Mixin(AvatarRenderer.class)
+@Mixin(value = AvatarRenderer.class, priority = 100)
 abstract class AvatarRendererMixin extends LivingEntityRenderer<Avatar, AvatarRenderState, HumanoidModel<AvatarRenderState>> {
     private AvatarRendererMixin(EntityRendererProvider.Context ctx, HumanoidModel<AvatarRenderState> model, float shadowRadius) {
         super(ctx, model, shadowRadius);
+    }
+
+    @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;F)V", at = @At("TAIL"))
+    private void wildfiregender$hdSkin(Avatar avatar, AvatarRenderState state, float partialTick, CallbackInfo ci) {
+        state.skin = HdSkinClient.skin(avatar.getUUID(), state.skin);
     }
 
     @ModifyReturnValue(method = "shouldShowName(Lnet/minecraft/world/entity/Avatar;D)Z", at = @At("RETURN"))

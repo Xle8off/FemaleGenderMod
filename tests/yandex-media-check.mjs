@@ -1,0 +1,45 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const root=process.argv[2]||'src/main/java/com/wildfire/client/music/';
+const source=fs.readFileSync(root+'YandexMediaBridge.java','utf8');
+const selector=source.match(/VOLUME_SELECTOR = "(.*?)"/)[1];
+const timelineSelector=source.match(/TIMELINE_SELECTOR = "(.*?)"/)[1];
+const read=source.match(/READ = """([\s\S]*?)"""/)[1].replaceAll('\\\\','\\').replaceAll('VOLUME_SELECTOR',selector).replaceAll('TIMELINE_SELECTOR',timelineSelector);
+const bridge=fs.readFileSync(root+'WebMediaBridge.java','utf8');
+const install=bridge.match(/INSTALL = """([\s\S]*?)"""/)[1];
+let now=1000;
+const session={metadata:{title:'Track',artist:'Artist'},playbackState:'playing',setActionHandler(){},setPositionState(){}};
+const slider={value:25,min:0,max:100,getAttribute(){return null;}};
+const context={location:{origin:'https://music.yandex.ru'},navigator:{mediaSession:session},window:{},performance:{now:()=>now},
+ document:{querySelectorAll:()=>[],querySelector:s=>s===selector?slider:null}};
+vm.runInNewContext(install,context);
+session.setPositionState({duration:180,position:20,playbackRate:1});
+now=3000;
+let state=vm.runInNewContext(read,context);
+assert.equal(state.positionMs,22000);assert.equal(state.durationMs,180000);assert.equal(state.volume,.25);
+session.playbackState='paused';assert.equal(vm.runInNewContext(read,context).positionMs,20000);
+session.setPositionState();assert.equal(vm.runInNewContext(read,context).durationMs,0);
+const timeline={value:42,max:200,getAttribute:()=> '0:42 / 3:20'};
+context.document.querySelector=s=>s===selector?slider:s===timelineSelector?timeline:null;
+state=vm.runInNewContext(read,context);
+assert.equal(state.positionMs,42000);assert.equal(state.durationMs,200000);
+timeline.getAttribute=()=> '0:00 / 3:20';
+assert.equal(vm.runInNewContext(read,context).positionMs,0,'track start must not reuse stale session time');
+context.location.origin='https://accounts.yandex.ru';assert.equal(Object.keys(vm.runInNewContext(read,context)).length,0);
+const actionSource=source.slice(source.indexOf('static String action('),source.indexOf('static String seek('));
+const actionParts=[...actionSource.matchAll(/\+?\s*"((?:\\.|[^"\\])*)"/g)].map(m=>m[1]);
+const returnSource=actionSource.slice(actionSource.indexOf('return "'));
+const fragments=[...returnSource.matchAll(/"((?:\\.|[^"\\])*)"/g)].map(m=>m[1]);
+let clicks=0,button={disabled:false,getAttribute:()=>null,click(){clicks++;}};
+context.location.origin='https://music.yandex.ru';
+const rootNode={querySelectorAll:()=>[button]};
+context.document.querySelector=()=>rootNode;
+for(const action of ['next','previous','playpause']){
+ const chosen=actionSource.match(new RegExp('case "'+action+'" -> "([^"]+)"'))[1];
+ const script=fragments[0]+fragments[1]+fragments[2]+chosen+fragments[3]+fragments[4];
+ assert.equal(vm.runInNewContext(script,context),true);
+ button.disabled=true;assert.equal(vm.runInNewContext(script,context),false);button.disabled=false;
+}
+assert.equal(clicks,3,'one website click per command');
+console.log('Yandex fixtures passed: media-session timing, volume normalization, pause, reset, origin guard');

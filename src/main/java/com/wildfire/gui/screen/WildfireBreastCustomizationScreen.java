@@ -1,381 +1,429 @@
-/*
- * Wildfire's Female Gender Mod is a female gender mod created for Minecraft.
- * Copyright (C) 2023-present WildfireRomeo
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 3 of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
 package com.wildfire.gui.screen;
 
-import com.wildfire.events.EntityHurtSoundEvent;
+import com.wildfire.gui.WildfireButton;
 import com.wildfire.gui.WildfireSlider;
-import com.wildfire.main.WildfireGender;
-import com.wildfire.main.config.ClientConfig;
-import com.wildfire.main.WildfireLang;
-import com.wildfire.main.config.value.ConfigValue;
-import net.minecraft.client.Minecraft;
+import com.wildfire.main.networking.appearance.BreastShape;
+import com.wildfire.main.networking.appearance.ServerAppearanceSync;
+import com.wildfire.main.networking.appearance.CosmeticCatalogClient;
+import com.wildfire.main.networking.appearance.ServerAppearanceSync.Cosmetics;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import com.wildfire.render.CosmeticLayer;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextColor;
-import net.minecraft.resources.Identifier;
-import net.minecraft.util.CommonColors;
-import org.jetbrains.annotations.UnknownNullability;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.util.Util;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 import java.util.UUID;
 
-/// @apiNote Only use this on the client side
-public class WildfireBreastCustomizationScreen extends BaseWildfireScreen {
+/** Full-body, server-backed appearance editor. */
+public final class WildfireBreastCustomizationScreen extends BaseWildfireScreen {
+    private static final int WHITE = com.wildfire.gui.UiTheme.TEXT;
+    private static final int MUTED = com.wildfire.gui.UiTheme.MUTED;
+    private static final int STROKE = com.wildfire.gui.UiTheme.BORDER;
+    private static final String[] SHIRTS = {"Нет", "Светлая", "Графит", "Слива"};
+    private static final String[] PANTS = {"Нет", "Тёмные", "Серые", "Каштан"};
+    private static final String[] HEADWEAR = {"Нет", "Кепка", "Нимб"};
+    private static final String[] PETS = {"Нет", "ImZap", "Lisa_Mary", "Xle8 · Хлеб", "_Nekes_"};
 
-    private static final int FULL_WIDTH = 166;
-    private static final int HALF_WIDTH = FULL_WIDTH / 2 - 2;
+    private final UUID sessionToken;
+    private final boolean female;
+    private final boolean figureEditable;
+    private final float originalSize;
+    private final BreastShape originalShape;
+    private final Cosmetics originalCosmetics;
+    private BreastShape shape;
+    private int shirt, pants, headwear, pet, category;
+    private int[] categories;
+    private boolean submitted;
+    private boolean initialized;
+    private WildfireButton[] categoryButtons;
+    private WildfireButton[] optionButtons;
+    private WildfireSlider sizeSlider;
+    private WildfireButton saveButton;
+    private WildfireButton purchaseButton;
+    private WildfireButton[] cosmeticTiles;
+    private WildfireButton[] petFilters;
+    private WildfireButton previousPage, nextPage;
+    private int cosmeticPage, petFilter;
+    private java.util.List<Integer> visibleCosmetics = java.util.List.of();
+    private com.wildfire.gui.PlayerAssetsScreen assets;
 
-    //~ if >=26.2 'net.minecraft.ChatFormatting' -> 'TextColor' {
-    private static final Component ENABLED = WildfireLang.LABEL_ENABLED.translateColored(TextColor.GREEN);
-    private static final Component DISABLED = WildfireLang.LABEL_DISABLED.translateColored(TextColor.RED);
-    //~}
-
-    private static final Identifier BACKGROUND_FEMALE = WildfireGender.id("textures/gui/breast_customization.png");
-    private static final Identifier BACKGROUND_OTHER = WildfireGender.id("textures/gui/breast_customization_other.png");
-
-    private static final Identifier BACKGROUND_CUSTOMIZATION = WildfireGender.id("textures/gui/tabs/breast_customization_tab.png");
-    private static final Identifier BACKGROUND_PHYSICS = WildfireGender.id("textures/gui/tabs/breast_physics_tab.png");
-    private static final Identifier BACKGROUND_MISC = WildfireGender.id("textures/gui/tabs/miscellaneous_tab.png");
-
-    private Tab currentTab = Tab.CUSTOMIZATION;
-
-    public WildfireBreastCustomizationScreen(Screen parent, UUID uuid) {
-        super(WildfireLang.APPEARANCE_SETTINGS_TITLE.translate(), parent, uuid);
+    public WildfireBreastCustomizationScreen(@Nullable Screen parent, UUID playerUUID, UUID sessionToken,
+                                             boolean female, boolean figureEditable, float initialSize, BreastShape initialShape, Cosmetics initialCosmetics) {
+        super(Component.literal("Кастомизация"), parent, playerUUID);
+        this.sessionToken = sessionToken;
+        this.female = female;
+        this.figureEditable = figureEditable;
+        this.originalSize = Math.clamp(initialSize, 0f, 0.8f);
+        this.originalShape = initialShape;
+        this.originalCosmetics = initialCosmetics;
+        this.shape = initialShape;
+        this.shirt = initialCosmetics.shirt();
+        this.pants = initialCosmetics.pants();
+        this.headwear = initialCosmetics.headwear();
+        this.pet = initialCosmetics.pet();
+        this.category = female && figureEditable ? 0 : 3;
     }
 
     @Override
-    public void init() {
+    protected void init() {
         super.init();
-        int y = this.height / 2 - 11;
+        var player = Objects.requireNonNull(getPlayer(), "server appearance profile");
+        if (!initialized && female) player.breasts().bustSize().update(originalSize);
+        initialized = true;
+        ServerAppearanceSync.preview(playerUUID, new Cosmetics(shirt, pants, headwear, pet));
+        int x = left(), y = top(), rail = 78;
+        int preview = Math.max(116, panelWidth() * 36 / 100);
+        int controlsX = x + rail + preview + 14;
+        int controlsW = x + panelWidth() - controlsX - 12;
+        if(assets==null)assets=new com.wildfire.gui.PlayerAssetsScreen(this,com.wildfire.main.networking.appearance.PrivateMessageInbox::requestAssetTicket);
+        assets.mount(controlsX,y+34,controlsW,panelHeight()-78,button->addRenderableWidget(button));
 
-        addButton(builder -> builder
-                .message(WildfireLang.CUSTOMIZATION_TAB_CUSTOMIZATION::translate)
-                .position(this.width / 2 - 130, y - 52)
-                .size(172/2 - 2, 12)
-                .onPress(_ -> {
-                    currentTab = Tab.CUSTOMIZATION;
-                    rebuildWidgets();
-                })
-                .active(currentTab != Tab.CUSTOMIZATION));
-
-        addButton(builder -> builder
-                .message(WildfireLang.CUSTOMIZATION_TAB_PHYSICS::translate)
-                .position(this.width / 2 - 42, y - 52)
-                .size(172/2 - 2, 12)
-                .onPress(_ -> {
-                    currentTab = Tab.PHYSICS;
-                    rebuildWidgets();
-                })
-                .active(currentTab != Tab.PHYSICS));
-
-        addButton(builder -> builder
-                .message(WildfireLang.CUSTOMIZATION_TAB_MISC::translate)
-                .position(this.width / 2 + 46, y - 52)
-                .size(172/2 - 2, 12)
-                .onPress(_ -> {
-                    currentTab = Tab.MISC;
-                    rebuildWidgets();
-                })
-                .active(currentTab != Tab.MISC));
-
-        final int tabOffsetY = y - 3 - 21;
-        switch(currentTab) {
-            case CUSTOMIZATION -> initCustomizationTab(tabOffsetY);
-            case PHYSICS -> initPhysicsTab(tabOffsetY);
-            case MISC -> initMiscTab(tabOffsetY);
+        categories = female && figureEditable ? new int[]{0, 1, 3, 4, 5} : new int[]{1, 3, 4, 5};
+        categoryButtons = new WildfireButton[categories.length];
+        String[] labels = {"Фигура", "Одежда", "Лицо", "Головные", "Питомцы", "Скин/плащ"};
+        for (int i = 0; i < categories.length; i++) {
+            final int target = categories[i];
+            categoryButtons[i] = cleanButton(labels[target], x + 10, y + 45 + i * 26, rail - 20, 21,
+                () -> { category = target; cosmeticPage = 0; refreshControls(); });
+            if (target == 1) categoryButtons[i].active = false;
         }
 
-        if(minecraft.options.keyJump.isDown()) {
-            minecraft.options.keyJump.setDown(false);
+        sizeSlider = addSlider(builder -> builder
+            .message(value -> Component.literal("Размер: " + Math.round(value * 100)))
+            .position(controlsX, y + 78).size(controlsW, 22)
+            .forConfig(player.breasts()::bustSize)
+            .save(_ -> {}).step(0.01).mouseStep(0.001));
+
+        optionButtons = new WildfireButton[4];
+        optionButtons[0] = cleanButton("<", controlsX, y + 112, 25, 22, () -> changeShape(-1));
+        optionButtons[1] = cleanButton(">", controlsX + controlsW - 25, y + 112, 25, 22, () -> changeShape(1));
+        optionButtons[2] = cleanButton("", controlsX, y + 78, controlsW, 22, this::cyclePrimary);
+        optionButtons[3] = cleanButton("", controlsX, y + 112, controlsW, 22, this::cycleSecondary);
+
+        petFilters = new WildfireButton[4];
+        String[] filterNames = {"Все", "Летающие", "Ходячие", "Парные"};
+        for (int i = 0; i < petFilters.length; i++) {
+            final int filter = i;
+            petFilters[i] = cleanButton(filterNames[i], controlsX + i * controlsW / 4, y + 70,
+                Math.max(20, controlsW / 4 - 2), 19,
+                () -> { petFilter = filter; cosmeticPage = 0; refreshControls(); });
         }
+        cosmeticTiles = new WildfireButton[6];
+        for (int i = 0; i < cosmeticTiles.length; i++) {
+            final int slot = i;
+            int tileSize = Math.min(60, (controlsW - 8) / 3);
+            int tileX = controlsX + (controlsW - (tileSize * 3 + 8)) / 2 + (i % 3) * (tileSize + 4);
+            int tileY = y + 93 + (i / 3) * (tileSize + 4);
+            cosmeticTiles[i] = addButton(builder -> builder.message(() -> Component.empty())
+                .position(tileX, tileY).size(tileSize, tileSize)
+                .onPress(_ -> selectCosmetic(slot))
+                .renderer((button, graphics, mouseX, mouseY, delta) -> {
+                    int index = cosmeticPage * cosmeticTiles.length + slot;
+                    if (index >= visibleCosmetics.size()) return;
+                    int id = visibleCosmetics.get(index);
+                    boolean selected = (category == 3 ? headwear : pet) == id;
+                    com.wildfire.gui.FlatButtons.plate(graphics,button.getX(),button.getY(),button.getWidth(),button.getHeight(),
+                        true,selected||button.isHoveredOrFocused(),selected,com.wildfire.gui.UiTheme.ACCENT);
+                    var entry = CosmeticCatalogClient.entry(id);
+                    boolean relationship = entry != null && entry.kind().equals("pet_relationship");
+                    var modelPreview = relationship ? null : CosmeticLayer.guiPreview(id, category == 3);
+                    if (relationship && minecraft.player != null) {
+                        var people = CosmeticLayer.relationshipGuiPreviews(minecraft.player.getUUID());
+                        graphics.text(font, "♥", button.getX()+tileSize/2-4, button.getY()+9, 0xFFE8323E, false);
+                        int artBottom = button.getBottom() - 15;
+                        int areaWidth = button.getWidth() - 4;
+                        for (int person = 0; person < people.size(); person++) {
+                            int left = button.getX() + 2 + person * areaWidth / people.size();
+                            int right = button.getX() + 2 + (person + 1) * areaWidth / people.size();
+                            var figure = people.get(person);
+                            graphics.skin(figure.model(), figure.texture(), 13f, 8f,
+                                person == 0 ? -8f : person == people.size()-1 ? 8f : 0f, 0f,
+                                left, button.getY()+6, right, artBottom+4);
+                        }
+                    } else if (modelPreview != null) {
+                        int artBottom = button.getBottom() - 15;
+                        // GuiGraphicsExtractor.skin takes scale before rotationX, rotationY and pivotY.
+                        if (category == 3) {
+                            // Headwear is authored around the player's head (well above the
+                            // origin used by the GUI skin renderer). Move its preview viewport
+                            // down and clip it to the tile so it cannot bleed into neighbours.
+                            graphics.enableScissor(button.getX()+2, button.getY()+3,
+                                button.getRight()-2, artBottom+3);
+                            graphics.skin(modelPreview.model(), modelPreview.texture(), 28f,
+                                12f, -24f, 0f, button.getX()+2, button.getY()+5,
+                                button.getRight()-2, artBottom+4);
+                            graphics.disableScissor();
+                        } else {
+                            graphics.skin(modelPreview.model(), modelPreview.texture(), 16f,
+                                8f, -10f, 0f, button.getX()+4, button.getY()+6,
+                                button.getRight()-4, artBottom+4);
+                        }
+                    } else if (id != 0) {
+                        graphics.text(font, "…", button.getX()+tileSize/2-4, button.getY()+17, MUTED, false);
+                    }
+                    String label = category == 3 ? cosmeticName(id, HEADWEAR) : cosmeticName(id, PETS);
+                    drawScrollingString(graphics, Component.literal(label), button.getX()+2,
+                        button.getBottom()-15, button.getRight()-2, button.getBottom()-2,
+                        TextAlignment.CENTER, WHITE, false);
+                }));
+        }
+        previousPage = cleanButton("←", controlsX, y + 223, 27, 19, () -> { cosmeticPage--; refreshControls(); });
+        nextPage = cleanButton("→", controlsX + controlsW - 27, y + 223, 27, 19,
+            () -> { cosmeticPage++; refreshControls(); });
+
+        saveButton = cleanButton("Сохранить", x + panelWidth() - 104, y + panelHeight() - 33, 92, 22, () -> {
+            if (lockedSelection()) { com.wildfire.main.networking.appearance.ModUpdate.cosmeticFeedback("Нужен доступ — donate.springplus.net", -1f, 10); return; }
+            submitted = ServerAppearanceSync.submit(sessionToken, female ? player.breasts().bustSize().get() : originalSize, shape,
+                originalCosmetics, new Cosmetics(shirt, pants, headwear, pet));
+            if (!submitted) { com.wildfire.main.networking.appearance.ModUpdate.cosmeticFeedback("Не удалось отправить образ", -1f, 10); return; }
+            com.wildfire.main.networking.appearance.ModUpdate.appearanceSavePending();
+            //~ if >=26.2 'minecraft.setScreen' -> 'minecraft.gui.setScreen'
+            minecraft.gui.setScreen(parent);
+        });
+        purchaseButton = addButton(builder -> builder.message(() -> Component.literal("Купить на сайте"))
+            .position(controlsX + 30, y + 223).size(controlsW - 60, 19)
+            .onPress(_ -> Util.getPlatform().openUri("https://donate.springplus.net"))
+            .renderer((button, graphics, mouseX, mouseY, delta) -> {
+                graphics.fill(button.getX(), button.getY(), button.getRight(), button.getBottom(),
+                    button.isHoveredOrFocused() ? 0xDD65445F : 0xCC48364B);
+                graphics.fill(button.getX(), button.getBottom() - 1, button.getRight(), button.getBottom(), 0xFFBB83B0);
+                graphics.item(new ItemStack(lockedPet() ? Items.ALLAY_SPAWN_EGG : Items.LEATHER_HELMET),
+                    button.getX() + 4, button.getY() + 4);
+                drawScrollingString(graphics, button.getMessage(), button.getX() + 22,
+                    button.getY(), button.getRight() - 3, button.getBottom(), TextAlignment.CENTER, WHITE, false);
+            }));
+        refreshControls();
+    }
+
+    private WildfireButton cleanButton(String label, int x, int y, int w, int h, Runnable action) {
+        return addButton(builder -> builder.message(() -> Component.literal(label))
+            .position(x, y).size(w, h).onPress(_ -> action.run())
+            .renderer((button, graphics, mouseX, mouseY, delta) -> {
+                com.wildfire.gui.FlatButtons.plate(graphics,button.getX(),button.getY(),button.getWidth(),button.getHeight(),
+                    button.active,button.isHoveredOrFocused(),false,com.wildfire.gui.UiTheme.ACCENT);
+                drawScrollingString(graphics, button.getMessage(), button.getX() + 3, button.getY(),
+                    button.getRight() - 3, button.getBottom(), TextAlignment.CENTER, WHITE, false);
+            }));
+    }
+
+    private void refreshControls() {
+        if(assets!=null)assets.visible(category==5);
+        for (int i = 0; i < categoryButtons.length; i++)
+            categoryButtons[i].active = categories[i] != 1;
+        sizeSlider.visible = female && category == 0;
+        optionButtons[0].visible = female && category == 0;
+        optionButtons[1].visible = female && category == 0;
+        optionButtons[2].visible = category == 1;
+        optionButtons[3].visible = category == 1;
+        boolean gallery = category == 3 || category == 4;
+        if (gallery) visibleCosmetics = cosmeticChoices();
+        int pages = Math.max(1, (visibleCosmetics.size() + cosmeticTiles.length - 1) / cosmeticTiles.length);
+        cosmeticPage = Math.clamp(cosmeticPage, 0, pages - 1);
+        for (int i = 0; i < cosmeticTiles.length; i++)
+            cosmeticTiles[i].visible = gallery && cosmeticPage * cosmeticTiles.length + i < visibleCosmetics.size();
+        for (int i = 0; i < petFilters.length; i++) {
+            petFilters[i].visible = category == 4;
+            petFilters[i].active = petFilter != i;
+        }
+        previousPage.visible = gallery && cosmeticPage > 0;
+        nextPage.visible = gallery && cosmeticPage < pages - 1;
+        String primary = switch(category) {
+            case 1 -> "Футболка: " + SHIRTS[shirt];
+            case 3 -> "Головной убор: " + cosmeticName(headwear,HEADWEAR);
+            case 4 -> "Питомец: " + cosmeticName(pet,PETS);
+            default -> "";
+        };
+        optionButtons[2].setMessage(Component.literal(primary));
+        optionButtons[3].setMessage(Component.literal("Штаны: " + PANTS[pants]));
+        saveButton.active = !lockedSelection();
+        saveButton.visible=category!=5;
+        purchaseButton.visible = lockedSelection();
+        if (gallery && purchaseButton.visible) {
+            previousPage.visible = false;
+            nextPage.visible = false;
+        }
+    }
+
+    private java.util.List<Integer> cosmeticChoices() {
+        var choices = new java.util.ArrayList<Integer>();
+        if (category == 3) {
+            for (int i = 0; i < HEADWEAR.length; i++) choices.add(i);
+        } else {
+            choices.add(0);
+            if (petFilter == 0 || petFilter == 1) for (int i = 1; i < PETS.length; i++) choices.add(i);
+        }
+        CosmeticCatalogClient.entries().stream()
+            .filter(entry -> category == 3 ? entry.kind().equals("headwear") :
+                switch (petFilter) {
+                    case 1 -> entry.kind().equals("pet_flying");
+                    case 2 -> entry.kind().equals("pet_walking");
+                    case 3 -> entry.kind().equals("pet_relationship");
+                    default -> entry.kind().startsWith("pet_");
+                })
+            .sorted(java.util.Comparator.comparingInt(com.wildfire.main.networking.appearance.CosmeticCatalogPackets.Entry::networkId))
+            .forEach(entry -> { if (!choices.contains(entry.networkId())) choices.add(entry.networkId()); });
+        return choices;
+    }
+
+    private void selectCosmetic(int slot) {
+        int index = cosmeticPage * cosmeticTiles.length + slot;
+        if (index >= visibleCosmetics.size()) return;
+        if (category == 3) headwear = visibleCosmetics.get(index);
+        else pet = visibleCosmetics.get(index);
+        previewCosmetics();
+    }
+
+    private void changeShape(int direction) {
+        BreastShape[] shapes = BreastShape.values();
+        shape = shapes[Math.floorMod(shape.ordinal() + direction, shapes.length)];
+        ServerAppearanceSync.preview(playerUUID, shape);
+    }
+
+    private void cyclePrimary() {
+        if (category == 1) {
+            shirt = (shirt + 1) % SHIRTS.length;
+            previewCosmetics();
+        } else if (category == 3) {
+            headwear = nextCosmetic(headwear,HEADWEAR.length,false);
+            previewCosmetics();
+        } else if (category == 4) {
+            pet = nextCosmetic(pet,PETS.length,true);
+            previewCosmetics();
+        }
+    }
+
+    private static String cosmeticName(int id,String[] defaults){
+        if(defaults==HEADWEAR&&id>=0&&id<defaults.length)return defaults[id];
+        var entry=CosmeticCatalogClient.entry(id);
+        if(entry!=null&&(defaults==PETS?entry.kind().startsWith("pet_"):entry.kind().equals("headwear")))return entry.name();
+        if(id>=0&&id<defaults.length)return defaults[id];
+        return entry==null?"Нет":entry.name();
+    }
+
+    private static int nextCosmetic(int current,int defaults,boolean pet){
+        var choices=new java.util.ArrayList<Integer>();
+        choices.add(0);
+        for(int i=1;i<defaults;i++)choices.add(i);
+        CosmeticCatalogClient.entries().stream()
+            .filter(entry->pet?entry.kind().startsWith("pet_"):entry.kind().equals("headwear"))
+            .sorted(java.util.Comparator.comparingInt(com.wildfire.main.networking.appearance.CosmeticCatalogPackets.Entry::networkId))
+            .forEach(entry->{if(!choices.contains(entry.networkId()))choices.add(entry.networkId());});
+        int index=choices.indexOf(current);
+        return choices.get((index+1)%choices.size());
+    }
+
+    private boolean lockedSelection(){return lockedPet() || lockedHeadwear();}
+    private boolean lockedPet(){
+        if(pet==0)return false;
+        var entry=CosmeticCatalogClient.entry(pet);
+        if(entry!=null)return !entry.owned();
+        if(pet<5)return !CosmeticCatalogClient.staticPetOwned(pet);
+        return entry==null||!entry.owned();
+    }
+    private boolean lockedHeadwear(){
+        if(headwear<5)return false;
+        var entry=CosmeticCatalogClient.entry(headwear);
+        return entry==null||!entry.owned();
+    }
+    private String purchaseHint(){
+        int id=lockedPet()?pet:lockedHeadwear()?headwear:0;
+        if(id==0)return null;
+        var entry=CosmeticCatalogClient.entry(id);
+        return entry==null?"Нужно купить, чтобы сохранить" :
+            entry.price()>0?"Нужно купить · Цена: "+entry.price():"Недоступно · Требуется право доступа";
+    }
+
+    private void cycleSecondary() {
+        pants = (pants + 1) % PANTS.length;
+        previewCosmetics();
+    }
+
+    private void previewCosmetics() {
+        ServerAppearanceSync.preview(playerUUID, new Cosmetics(shirt, pants, headwear, pet));
+        refreshControls();
+        if (lockedSelection()) com.wildfire.main.networking.appearance.ModUpdate.cosmeticFeedback(
+            "Нужен доступ — кнопка покупки в меню", -1f, 9);
     }
 
     @Override
     public void removed() {
-        if(minecraft.options.keyJump.isDown()) {
-            minecraft.options.keyJump.setDown(false);
+        if(assets!=null)assets.removed();
+        if (!submitted) {
+            var player = getPlayer();
+            if (player != null && female) player.breasts().bustSize().update(originalSize);
+            ServerAppearanceSync.preview(playerUUID, originalShape);
+            ServerAppearanceSync.preview(playerUUID, originalCosmetics);
         }
-    }
-
-    private void initCustomizationTab(final int tabOffsetY) {
-        final var plr = Objects.requireNonNull(getPlayer(), "getPlayer()");
-
-        addSlider(builder -> builder
-                .message(value -> WildfireLang.WARDROBE_SLIDER_BREAST_SIZE.translate(Math.round(value * 1.25f * 100)))
-                .position(this.width / 2 - 36, tabOffsetY - 2)
-                .size(FULL_WIDTH, 20)
-                .forConfig(() -> plr.breasts().bustSize())
-                .step(0.01)
-                .mouseStep(0.001));
-
-        addSlider(builder -> builder
-                .message(value -> WildfireLang.WARDROBE_SLIDER_SEPARATION.translate(Math.round((Math.round(value * 100f) / 100f) * 10)))
-                .position(this.width / 2 - 36, tabOffsetY + 22)
-                .size(HALF_WIDTH, 20)
-                .forConfig(() -> plr.breasts().xOffset())
-                .mouseStep(0.05));
-
-        addSlider(builder -> builder
-                .message(value -> WildfireLang.WARDROBE_SLIDER_HEIGHT.translate(Math.round((Math.round(value * 100f) / 100f) * 10)))
-                .position(this.width / 2 - 36 + HALF_WIDTH + 4, tabOffsetY + 22)
-                .size(HALF_WIDTH, 20)
-                .forConfig(() -> plr.breasts().yOffset())
-                .mouseStep(0.05));
-
-        addSlider(builder -> builder
-                .message(value -> WildfireLang.WARDROBE_SLIDER_DEPTH.translate(Math.round((Math.round(value * 100f) / 100f) * 10)))
-                .position(this.width / 2 - 36, tabOffsetY + 46)
-                .size(HALF_WIDTH, 20)
-                .forConfig(() -> plr.breasts().zOffset())
-                .step(0.1)
-                .mouseStep(0.05));
-        addSlider(builder -> builder
-                .message(value -> WildfireLang.WARDROBE_SLIDER_ROTATION.translate(Math.round((Math.round(value * 100f) / 100f) * 100)))
-                .position(this.width / 2 - 36 + HALF_WIDTH + 4, tabOffsetY + 46)
-                .size(HALF_WIDTH, 20)
-                .forConfig(() -> plr.breasts().cleavage())
-                .step(0.1)
-                .mouseStep(0.1));
-
-
-        addButton(builder -> builder
-                .message(WildfireLang.UV_EDITOR::translate)
-                .position(this.width / 2 - 36, this.height / 2 + 43)
-                .size(120, 15)
-                .onPress(_ -> {
-                    //~ if >=26.2 'minecraft.setScreen' -> 'minecraft.gui.setScreen'
-                    minecraft.gui.setScreen(new WildfireBreastUVEditorScreen(this, playerUUID));
-                }));
-    }
-
-    private void initPhysicsTab(final int tabOffsetY) {
-        final var plr = Objects.requireNonNull(getPlayer(), "getPlayer()");
-        final var ref = new Object() {
-            @UnknownNullability
-            AbstractWidget bounceSlider, floppySlider, overridePhysics, dualPhysics;
-        };
-
-        addButton(builder -> builder
-                .message(WildfireLang.CHAR_SETTINGS_JUMP::translate)
-                .position(this.width / 2 - 130, this.height / 2 + 65)
-                .size(80, 15)
-                .onPress(button -> {
-                    if(Minecraft.getInstance().options.keyJump.isDown()) {
-                        Minecraft.getInstance().options.keyJump.setDown(false);
-                        button.setMessage(WildfireLang.CHAR_SETTINGS_JUMP.translate());
-                    } else {
-                        Minecraft.getInstance().options.keyJump.setDown(true);
-                        button.setMessage(WildfireLang.CHAR_SETTINGS_JUMPING.translate());
-                    }
-                }));
-
-        addButton(builder -> builder
-                .message(() -> WildfireLang.CHAR_SETTINGS_PHYSICS.translate(plr.breasts().physics().enabled().get() ? ENABLED : DISABLED))
-                .position(this.width / 2 - 36, tabOffsetY - 2)
-                .size(FULL_WIDTH, 20)
-                .onPress(button -> {
-                    if (plr.breasts().physics().enabled().update(ConfigValue.TOGGLE)) {
-                        plr.save();
-                        button.updateMessage();
-                        boolean breastPhysics = plr.breasts().physics().enabled().get();
-                        ref.bounceSlider.active = breastPhysics;
-                        ref.floppySlider.active = breastPhysics;
-                        ref.overridePhysics.active = breastPhysics;
-                        ref.dualPhysics.active = breastPhysics;
-                    }
-                }));
-
-        ref.dualPhysics = addButton(builder -> builder
-                .message(() -> WildfireLang.CUSTOMIZATION_DUAL_PHYSICS.translate(plr.breasts().physics().uniboob().get() ? CommonComponents.GUI_NO : CommonComponents.GUI_YES))
-                .position(this.width / 2 - 36, tabOffsetY + 22)
-                .size(FULL_WIDTH, 20)
-                .onPress(button -> {
-                    if (plr.breasts().physics().uniboob().update(ConfigValue.TOGGLE)) {
-                        plr.save();
-                        button.updateMessage();
-                    }
-                })
-                .active(plr.breasts().physics().enabled()));
-
-        ref.overridePhysics = addButton(builder -> builder
-                .message(() -> WildfireLang.CHAR_SETTINGS_OVERRIDE_PHYSICS.translate(ClientConfig.config().armorPhysicsOverride.get() ? ENABLED : DISABLED))
-                .position(this.width / 2 - 36, tabOffsetY + 70)
-                .size(FULL_WIDTH, 20)
-                .onPress(button -> {
-                    if (ClientConfig.config().armorPhysicsOverride.update(ConfigValue.TOGGLE)) {
-                        ClientConfig.save();
-                        button.updateMessage();
-                    }
-                })
-                .tooltip(Tooltip.create(WildfireLang.CHAR_SETTINGS_OVERRIDE_PHYSICS_TOOLTIP.line(1)
-                        .append("\n\n")
-                        .append(WildfireLang.CHAR_SETTINGS_OVERRIDE_PHYSICS_TOOLTIP.line(2))))
-                .active(plr.breasts().physics().enabled()));
-
-        ref.bounceSlider = addSlider(builder -> builder
-                .message(value -> WildfireLang.WARDROBE_SLIDER_BOUNCE.translate(Math.round(3 * value * 100)))
-                .position(this.width / 2 - 36, tabOffsetY + 46)
-                .size(HALF_WIDTH, 20)
-                .forConfig(() -> plr.breasts().physics().bounceMultiplier())
-                .step(0.005)
-                .active(plr.breasts().physics().enabled()));
-
-        ref.floppySlider = addSlider(builder -> builder
-                .message(value -> WildfireLang.WARDROBE_SLIDER_FLOPPY.translate(Math.round(value * 100)))
-                .position(this.width / 2 - 36 + HALF_WIDTH + 2, tabOffsetY + 46)
-                .size(HALF_WIDTH, 20)
-                .forConfig(() -> plr.breasts().physics().floppiness())
-                .step(0.01)
-                .active(plr.breasts().physics().enabled()));
-    }
-
-    private void initMiscTab(final int tabOffsetY) {
-        final var plr = Objects.requireNonNull(getPlayer(), "getPlayer()");
-        final var ref = new Object() {
-            @UnknownNullability
-            AbstractWidget pitchSlider;
-        };
-
-        addButton(builder -> builder
-                .message(() -> WildfireLang.CHAR_SETTINGS_HURT_SOUNDS.translate(plr.sounds().hurt().get() ? ENABLED : DISABLED))
-                .position(this.width / 2 - 36, tabOffsetY - 2)
-                .size(FULL_WIDTH, 20)
-                .onPress(button -> {
-                    if (plr.sounds().hurt().update(ConfigValue.TOGGLE)) {
-                        plr.save();
-                        ref.pitchSlider.active = plr.sounds().hurt().get();
-                        button.updateMessage();
-                    }
-                })
-                .tooltip(Tooltip.create(WildfireLang.CHAR_SETTINGS_HURT_SOUNDS_TOOLTIP.translate())));
-
-        ref.pitchSlider = addSlider(builder -> builder
-                .message(value -> WildfireLang.WARDROBE_SLIDER_PITCH.translate(Math.round(value * 100)))
-                .position(this.width / 2 - 36, tabOffsetY + 22)
-                .size(HALF_WIDTH, 20)
-                .forConfig(() -> plr.sounds().voicePitch())
-                .save(_ -> {
-                    plr.save();
-                    var clientPlayer = Objects.requireNonNull(minecraft).player;
-                    if(clientPlayer != null) {
-                        EntityHurtSoundEvent.EVENT.invoker().onHurt(clientPlayer, clientPlayer.damageSources().generic());
-                    }
-                })
-                .step(0.01)
-                .active(plr.sounds().hurt()));
-
-        addButton(builder -> builder
-                .message(() -> WildfireLang.CHAR_SETTINGS_HIDE_IN_ARMOR.translate(plr.showBreastsInArmor().get() ? DISABLED : ENABLED))
-                .position(this.width / 2 - 36, tabOffsetY + 46)
-                .size(FULL_WIDTH, 20)
-                .onPress(button -> {
-                    if (plr.showBreastsInArmor().update(ConfigValue.TOGGLE)) {
-                        plr.save();
-                        button.updateMessage();
-                    }
-                }));
-
-        addButton(builder -> builder
-                .message(() -> WildfireLang.CHAR_SETTINGS_ARMOR_STAT.translate(ClientConfig.config().armorStat.get() ? ENABLED : DISABLED))
-                .position(this.width / 2 - 36, tabOffsetY + 70)
-                .size(FULL_WIDTH, 20)
-                .onPress(button -> {
-                    if (ClientConfig.config().armorStat.update(ConfigValue.TOGGLE)) {
-                        ClientConfig.save();
-                        button.updateMessage();
-                    }
-                }));
-
-        addButton(builder -> builder
-                .message(() -> WildfireLang.HOLIDAY_THEMES.translate(plr.holidayThemes().get() ? ENABLED : DISABLED))
-                .position(this.width / 2 - 36, tabOffsetY + 94)
-                .size(FULL_WIDTH, 20)
-                .onPress(button -> {
-                    if (plr.holidayThemes().update(ConfigValue.TOGGLE)) {
-                        plr.save();
-                        button.updateMessage();
-                    }
-                })
-                .tooltip(Tooltip.create(WildfireLang.HOLIDAY_THEMES_TOOLTIP.line(1))));
     }
 
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         extractTransparentBackground(graphics);
-
-        var plr = getPlayer();
-        if(plr == null) return;
-        Identifier backgroundTexture = switch(plr.gender().get()) {
-            case FEMALE -> BACKGROUND_FEMALE;
-            case OTHER -> BACKGROUND_OTHER;
-            default -> null;
-        };
-
-        if(backgroundTexture != null) {
-            graphics.blit(RenderPipelines.GUI_TEXTURED, backgroundTexture, (this.width - 272) / 2, (this.height - 138) / 2, 0, 0, 272, 130, 512, 512);
+        int x = left(), y = top(), w = panelWidth(), h = panelHeight();
+        int stageX = x + 78, preview = Math.max(116, w * 36 / 100);
+        com.wildfire.gui.RoundedPanels.fill(graphics,x,y,x+w,y+h,com.wildfire.gui.UiTheme.BACKGROUND,6);
+        com.wildfire.gui.FlatButtons.joinedBackdrop(graphics,x+1,y+1,x+w-1,y+32,com.wildfire.gui.UiTheme.CHROME,5,true,false);
+        graphics.fill(x+1,y+32,x+w-1,y+33,STROKE);
+        com.wildfire.gui.FlatButtons.frame(graphics,x,y,x+w,y+h,com.wildfire.gui.UiTheme.ACCENT,6);
+        com.wildfire.gui.RoundedPanels.fill(graphics,stageX,y+36,stageX+preview,y+h-42,com.wildfire.gui.UiTheme.CHROME,4);
+        com.wildfire.gui.RoundedPanels.fill(graphics,stageX+preview+7,y+36,x+w-7,y+h-42,com.wildfire.gui.UiTheme.CHROME,4);
+        graphics.fill(stageX-5,y+40,stageX-4,y+h-46,STROKE);
+        if(assets!=null){
+            assets.renderEmbedded(graphics,stageX+5,y+39,preview-10,h-86,mouseX,mouseY,delta);
+        } else if (minecraft.player != null) {
+            InventoryScreen.extractEntityInInventoryFollowsMouse(graphics,
+                stageX + 5, y + 39, stageX + preview - 5, y + h - 47,
+                Math.max(32, Math.min(74, (h - 90) * 2 / 5)),
+                getEntityScale(minecraft.player, 0f), mouseX, mouseY, minecraft.player);
         }
-
-        graphics.blit(RenderPipelines.GUI_TEXTURED, currentTab.background, this.width / 2 - 42, this.height / 2 - 43, 0, 0, 178, currentTab.backgroundHeight, 512, 512);
-        drawScrollingString(graphics, getTitle(), 0, (height / 2) - 82, TextAlignment.CENTER, CommonColors.WHITE, graphics.guiWidth(), 5, false);
-
-        renderPlayerInFrame(graphics, this.width / 2 - 90, this.height / 2 + 44, mouseX, mouseY);
     }
 
     @Override
-    public boolean mouseReleased(MouseButtonEvent arg) {
-        //Ensure all sliders are saved
-        children().forEach(child -> {
-            if(child instanceof WildfireSlider slider) {
-                slider.save();
-            }
-        });
-        return super.mouseReleased(arg);
-    }
-
-    /*@Override
-    public boolean keyPressed(KeyInput input) {
-        if(currentTab == Tab.PHYSICS) {
-            if (input.getKeycode() == MinecraftClient.getInstance().options.jumpKey.getDefaultKey().getCode()) {
-                MinecraftClient.getInstance().options.jumpKey.setPressed(true);
-            }
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+        if (getFocused() == previousPage || getFocused() == nextPage
+            || optionButtons != null && (getFocused() == optionButtons[0] || getFocused() == optionButtons[1]))
+            setFocused(null);
+        super.extractRenderState(graphics, mouseX, mouseY, delta);
+        int x = left(), y = top();
+        int controlsX = x + 78 + Math.max(116, panelWidth() * 36 / 100) + 14;
+        String title="Персонализация";
+        graphics.text(font,title,x+(panelWidth()-font.width(title))/2,y+12,WHITE,false);
+        graphics.text(font, "ПЕРСОНАЖ", x + 87, y + 43, MUTED, false);
+        graphics.text(font, switch(category) { case 0 -> "ФИГУРА"; case 1 -> "ОДЕЖДА"; case 3 -> "ГОЛОВНЫЕ УБОРЫ";case 5->"СКИН И ПЛАЩ"; default -> "ПИТОМЦЫ"; },
+            controlsX, y + 49, MUTED, false);
+        if (category == 0) {
+            int center = controlsX + (x + panelWidth() - controlsX - 12) / 2;
+            graphics.text(font, shape.label(), center - font.width(shape.label()) / 2, y + 119, WHITE, false);
         }
-        return super.keyPressed(input);
-    }*/
-
-    private enum Tab {
-        CUSTOMIZATION(BACKGROUND_CUSTOMIZATION, 80),
-        PHYSICS(BACKGROUND_PHYSICS, 104),
-        MISC(BACKGROUND_MISC, 128),
-        ;
-
-        final Identifier background;
-        final int backgroundHeight;
-
-        Tab(Identifier background, int backgroundHeight) {
-            this.background = background;
-            this.backgroundHeight = backgroundHeight;
+        graphics.text(font, "Поверните мышью", x + 87, y + panelHeight() - 30, MUTED, false);
+        String hint=purchaseHint();
+        if(hint!=null){
+            int right=x+panelWidth()-12;
+            graphics.fill(controlsX-4,y+146,right,y+170,0xCC382936);
+            graphics.text(font,hint,controlsX,y+154,0xFFFFB7CB,false);
+            graphics.text(font,"Примерка доступна до покупки",controlsX,y+176,MUTED,false);
         }
     }
+
+    private int panelWidth() { return Math.min(width - 12, 500); }
+    @Override public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event,boolean doubleClick){
+        if(assets!=null&&assets.mouseClicked(event,doubleClick))return true;
+        return super.mouseClicked(event,doubleClick);
+    }
+    @Override public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event,double dx,double dy){
+        if(assets!=null&&assets.mouseDragged(event,dx,dy))return true;
+        return super.mouseDragged(event,dx,dy);
+    }
+    @Override public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event){
+        if(assets!=null&&assets.mouseReleased(event))return true;
+        return super.mouseReleased(event);
+    }
+    private int panelHeight() { return Math.min(height - 12, 290); }
+    private int left() { return (width - panelWidth()) / 2; }
+    private int top() { return (height - panelHeight()) / 2; }
 }

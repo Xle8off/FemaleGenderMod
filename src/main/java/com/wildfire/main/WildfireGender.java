@@ -24,6 +24,8 @@ import com.google.common.cache.LoadingCache;
 import com.mojang.logging.LogUtils;
 import com.wildfire.main.entitydata.PlayerConfigHolder;
 import com.wildfire.main.networking.WildfireSync;
+import com.wildfire.main.networking.appearance.ServerAppearanceSync;
+import com.wildfire.main.networking.appearance.HdSkinPackets;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
@@ -60,7 +62,7 @@ public class WildfireGender implements ModInitializer {
         CACHE = builder.build(CacheLoader.from(key -> {
             var config = new PlayerConfigHolder(key);
             // only attempt to load player data on the client
-            if(LoaderAgnostics.onClient()) {
+            if(LoaderAgnostics.onClient() && !ServerAppearanceSync.isActive()) {
                 // markForSync being true will only ever do anything for the client player
                 WildfireGenderClient.loadGenderInfo(config, true, false);
             }
@@ -70,7 +72,8 @@ public class WildfireGender implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        WildfireSync.register();
+        ServerAppearanceSync.registerPayloads();
+        HdSkinPackets.registerPayloads();
         WildfireEventHandler.registerCommonEvents();
     }
 

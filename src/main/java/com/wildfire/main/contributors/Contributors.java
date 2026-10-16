@@ -54,6 +54,7 @@ public final class Contributors {
 
     static {
         addContributor("23b6feed-2dfe-4f2e-9429-863fd4adb946", "WildfireFGM", Contributor.Role.MOD_CREATOR);
+        addContributor("4bceded7-9a58-4362-95e5-62c75b92f1d4", "Xle8", Contributor.Role.DEVELOPER);
         addContributor("70336328-0de7-430e-8cba-2779e2a05ab5", "celeste", Contributor.Role.FABRIC_MAINTAINER);
         addContributor("64e57307-72e5-4f43-be9c-181e8e35cc9b", "pupnewfster", Contributor.Role.NEOFORGE_MAINTAINER);
         addContributor("ad8ee68c-0aa1-47f9-b29f-f92fa1ef66dc", "DiaDemiEmi", Contributor.Role.DEVELOPER);

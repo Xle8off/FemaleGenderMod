@@ -1,6 +1,6 @@
 {
   "hurt.wildfire_gender.female": "Female Player Hurt",
-  "key.category.wildfire_gender.generic": "Female Gender Mod",
+  "key.category.wildfire_gender.generic": "SpringPlusCosmetics",
   "key.wildfire_gender.gender_menu": "Female Gender Menu",
   "key.wildfire_gender.toggle": "Toggle Breast Rendering",
   "toast.wildfire_gender.get_started": "Press %1$s to get started!",
@@ -102,7 +102,7 @@
   "wildfire_gender.first_time_setup.enable.tooltip.line1": "With cloud sync enabled, your configuration will be stored and provided to other players even if you don't currently have the mod installed.",
   "wildfire_gender.first_time_setup.enable.tooltip.line2": "You can delete your cloud sync profile at any point in the Cloud Sync settings menu after turning it off.",
   "wildfire_gender.first_time_setup.notice": "You can always change this setting later in the mod menu.",
-  "wildfire_gender.first_time_setup.title": "Welcome to the Female Gender Mod!",
+  "wildfire_gender.first_time_setup.title": "Welcome to SpringPlusCosmetics!",
   "wildfire_gender.generic.brackets": "[%1$s]",
   "wildfire_gender.generic.concat": "%1$s%2$s",
   "wildfire_gender.generic.dash_explanation": "%1$s - %2$s",
@@ -132,7 +132,7 @@
   "wildfire_gender.player_list.state.loading": "Loading Data...",
   "wildfire_gender.player_list.state.synced": "Synced Player",
   "wildfire_gender.player_list.sync_status": "Sync Status",
-  "wildfire_gender.player_list.title": "Female Gender Mod",
+  "wildfire_gender.player_list.title": "SpringPlusCosmetics",
   "wildfire_gender.slider.bounce": "Intensity: %1$s%%",
   "wildfire_gender.slider.floppy": "Momentum: %1$s%%",
   "wildfire_gender.slider.voice_pitch": "Pitch: %1$s%%",
@@ -189,5 +189,5 @@
   "wildfire_gender.wardrobe.slider.height": "Height: %1$s",
   "wildfire_gender.wardrobe.slider.rotation": "Rotation: %1$s°",
   "wildfire_gender.wardrobe.slider.separation": "Separation: %1$s",
-  "wildfire_gender.wardrobe.title": "Female Gender Mod"
+  "wildfire_gender.wardrobe.title": "SpringPlusCosmetics"
 }

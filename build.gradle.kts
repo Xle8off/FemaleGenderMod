@@ -15,11 +15,24 @@ base {
 }
 
 repositories {
+    mavenCentral()
     maven("https://pkgs.dev.azure.com/djtheredstoner/DevAuth/_packaging/public/maven/v1") { name = "DevAuth" }
     maven("https://maven.terraformersmc.com/") { name = "Terraformers" }
+    maven("https://repo.redlance.org/public") { name = "Redlance" }
 }
 
 dependencies {
+    // Preserve the shared moderation integration already maintained in this repository.
+    if (sc.current.version == "26.2") {
+        include(implementation("dev.aeltorx.inflow:client:1.0.48")!!)
+        implementation("net.fabricmc.fabric-api:fabric-api:0.156.0+26.2")
+    }
+    // Lazy-loaded only from the camera setup window; no browser or automatic capture.
+    include(implementation("dev.onvoid.webrtc:webrtc-java:0.19.0") { isTransitive = false })
+    for (platform in listOf("windows-x86_64", "windows-aarch64", "linux-x86_64", "linux-aarch64", "linux-aarch32", "macos-x86_64", "macos-aarch64")) {
+        include(runtimeOnly("dev.onvoid.webrtc:webrtc-java:0.19.0:$platform") { isTransitive = false })
+    }
+    include(implementation("javazoom:jlayer:1.0.1")!!)
     minecraft("com.mojang:minecraft:${sc.current.version}")
     implementation("net.fabricmc:fabric-loader:${project.property("loader_version")}")
 
@@ -31,6 +44,7 @@ dependencies {
     implementation("net.fabricmc.fabric-api:fabric-command-api-v2")
     implementation("net.fabricmc.fabric-api:fabric-rendering-v1")
     implementation("net.fabricmc.fabric-api:fabric-resource-loader-v1")
+    implementation("net.fabricmc.fabric-api:fabric-screen-api-v1")
     runtimeOnly("net.fabricmc.fabric-api:fabric-registry-sync-v0")
 
     // Allow logging into an actual Minecraft account in a dev env
@@ -43,6 +57,9 @@ dependencies {
         localRuntime("com.terraformersmc:modmenu:${modmenu}")
         localRuntime("net.fabricmc.fabric-api:fabric-screen-api-v1")
     }
+
+    val playerAnimVersion: String = sc.properties["dependencies.playeranimlib"]
+    compileOnly("com.zigythebird.playeranim:PlayerAnimationLibFabric:$playerAnimVersion")
 }
 
 tasks.processResources {

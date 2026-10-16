@@ -21,6 +21,7 @@ classes/
 
 #Minecraft
 run/
+logs/
 runV2/
 dependencies/
 src/main/generated/.cache/
