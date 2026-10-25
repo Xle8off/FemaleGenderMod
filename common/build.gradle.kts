@@ -4,10 +4,7 @@ plugins {
 }
 
 neoForge {
-    enable {
-        neoFormVersion = "${sc.current.version}-${sc.properties["dependencies.neoform_timestamp"] as String}"
-        enabledSourceSets = sourceSets // All source sets use Minecraft code
-    }
+    version = sc.properties["dependencies.neo_version"]
 
     val at = sc.branch.project.file("src/main/resources/META-INF/accesstransformer.cfg")
     accessTransformers.from(sc.process(at, "build/dev.at").absolutePath)
@@ -15,6 +12,7 @@ neoForge {
 }
 
 dependencies {
+    compileOnly("org.lwjgl:lwjgl-tinyfd:3.4.1")
     implementation("javazoom:jlayer:1.0.1")
     compileOnly("dev.onvoid.webrtc:webrtc-java:0.19.0") { isTransitive = false }
     // Fabric and NeoForge both bundle Fabric Mixin, so it is safe to use it in common

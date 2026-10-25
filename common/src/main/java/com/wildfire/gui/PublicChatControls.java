@@ -46,14 +46,14 @@ public final class PublicChatControls {
         if(!target.isFocused())target.setFocused(true);
     }
     public boolean composerKey(net.minecraft.client.input.KeyEvent event){
-        if(input.getValue().startsWith("/")||event.key()==258||event.isConfirmation()||event.key()==256||event.key()==264||event.key()==265)return false;
+        if(input.getValue().startsWith("/")||event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_TAB||event.isConfirmation()||event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE||event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_DOWN||event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_UP)return false;
         return composer.keyPressed(event);
     }
     private final MultiLineEditBox composer;
     private final ModSearchBox pickerSearch;
     public boolean searchKey(net.minecraft.client.input.KeyEvent event){
         if(!picker||stickers||!pickerSearch.isFocused())return false;
-        if(event.key()==256||event.isConfirmation()){pickerSearch.setFocused(false);focusComposer();}
+        if(event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE||event.isConfirmation()){pickerSearch.setFocused(false);focusComposer();}
         else pickerSearch.keyPressed(event);
         return true;
     }

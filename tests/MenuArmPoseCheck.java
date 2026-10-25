@@ -21,7 +21,7 @@ public final class MenuArmPoseCheck {
             });
         var stack=new com.mojang.blaze3d.vertex.PoseStack();
         stack.translate(2,3,4);
-        stack.mulPose(com.mojang.math.Axis.YP.rotation(.7f));
+        stack.rotate(com.mojang.math.Axis.YP.rotation(.7f));
         var world=new org.joml.Vector3f(0,10f/16f,2f/16f);
         stack.last().pose().transformPosition(world);
         var wrapped=new com.wildfire.client.music.MenuSleeveVertices(sink,stack.last(),angle);

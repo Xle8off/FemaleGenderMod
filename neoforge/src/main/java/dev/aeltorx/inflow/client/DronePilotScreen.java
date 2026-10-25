@@ -9,7 +9,7 @@ import net.minecraft.world.entity.Entity;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 /** Manual camera flight; only the server can authorize contact and execute a ban. */
 public final class DronePilotScreen extends Screen {
@@ -41,26 +41,26 @@ public final class DronePilotScreen extends Screen {
     @Override public void tick() {
         if(camera==null)return;
         if(!ModerationService.allowed()||minecraft.getConnection()!=connection||!ModerationService.online(target)||ticks++>1200){onClose();return;}
-        if(keys.contains(GLFW.GLFW_KEY_LEFT))yaw-=3;
-        if(keys.contains(GLFW.GLFW_KEY_RIGHT))yaw+=3;
-        if(keys.contains(GLFW.GLFW_KEY_UP))pitch-=2;
-        if(keys.contains(GLFW.GLFW_KEY_DOWN))pitch+=2;
+        if(keys.contains(InputConstants.KEY_LEFT))yaw-=3;
+        if(keys.contains(InputConstants.KEY_RIGHT))yaw+=3;
+        if(keys.contains(InputConstants.KEY_UP))pitch-=2;
+        if(keys.contains(InputConstants.KEY_DOWN))pitch+=2;
         pitch=Math.clamp(pitch,-80,80);
         double a=Math.toRadians(yaw),p=Math.toRadians(pitch),speed=.2;
-        int forward=(keys.contains(GLFW.GLFW_KEY_W)?1:0)-(keys.contains(GLFW.GLFW_KEY_S)?1:0);
-        int strafe=(keys.contains(GLFW.GLFW_KEY_D)?1:0)-(keys.contains(GLFW.GLFW_KEY_A)?1:0);
+        int forward=(keys.contains(InputConstants.KEY_W)?1:0)-(keys.contains(InputConstants.KEY_S)?1:0);
+        int strafe=(keys.contains(InputConstants.KEY_D)?1:0)-(keys.contains(InputConstants.KEY_A)?1:0);
         double norm=Math.max(1,Math.hypot(forward,strafe));
         x+=(-Math.sin(a)*forward*Math.cos(p)-Math.cos(a)*strafe)*speed/norm;
         z+=(Math.cos(a)*forward*Math.cos(p)-Math.sin(a)*strafe)*speed/norm;
         y+=-Math.sin(p)*forward*speed/norm;
-        if(keys.contains(GLFW.GLFW_KEY_SPACE))y+=speed;
-        if(keys.contains(GLFW.GLFW_KEY_LEFT_SHIFT))y-=speed;
+        if(keys.contains(InputConstants.KEY_SPACE))y+=speed;
+        if(keys.contains(InputConstants.KEY_LSHIFT))y-=speed;
         camera.setOldPosAndRot();camera.setPos(x,y-camera.getEyeHeight(),z);camera.setYRot(yaw);camera.setXRot(pitch);
         if(ticks%3==0)minecraft.getConnection().send(new net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket(
             new DroneMovePayload(x,y,z,(yaw%360+540)%360-180,pitch)));
     }
     @Override public boolean keyPressed(KeyEvent event) {
-        if(event.key()==GLFW.GLFW_KEY_ESCAPE){onClose();return true;}
+        if(event.key()==InputConstants.KEY_ESCAPE){onClose();return true;}
         keys.add(event.key());return true;
     }
     @Override public boolean keyReleased(KeyEvent event){keys.remove(event.key());return true;}
@@ -72,7 +72,7 @@ public final class DronePilotScreen extends Screen {
         if(mx<width*.2||mx>width*.8||my<height*.2||my>height*.8){
             mouseX=width/2.0;mouseY=height/2.0;
             var window=minecraft.getWindow();
-            GLFW.glfwSetCursorPos(window.handle(),window.getScreenWidth()/2.0,window.getScreenHeight()/2.0);
+            org.lwjgl.sdl.SDLMouse.SDL_WarpMouseInWindow(window.handle(),window.getScreenWidth()/2f,window.getScreenHeight()/2f);
         }
         if(camera!=null){camera.setYRot(yaw);camera.setXRot(pitch);camera.yRotO=yaw;camera.xRotO=pitch;}
     }

@@ -40,9 +40,9 @@ public final class ListeningLabelRenderer {
         pose.pushPose();
         try {
             pose.translate(0, state.boundingBoxHeight + (state.nameTag == null ? .25 : .80), 0);
-            pose.mulPose(camera.orientation);
+            pose.rotate(camera.orientation);
             pose.scale(.016f, -.016f, .016f);
-            collector.submitCustomGeometry(pose, RenderTypes.textBackground(), (matrix, vertices) -> {
+            collector.submitCustomGeometry(pose, RenderTypes.debugQuads(), (matrix, vertices) -> {
                 for (var rect : mesh) quad(matrix, vertices, left + rect.left(), rect.top() - ListeningCardMesh.HEIGHT,
                     left + rect.right(), rect.bottom() - ListeningCardMesh.HEIGHT, rect.color());
             });

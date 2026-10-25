@@ -2,7 +2,7 @@ package com.wildfire.client.music;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFWNativeWin32;
+
 
 /** Browser sites, each with an isolated persistent profile. */
 public final class SpotifyEmbeddedScreen extends Screen {
@@ -50,7 +50,7 @@ public final class SpotifyEmbeddedScreen extends Screen {
         var window=minecraft.getWindow();
         double sx=(double)window.getScreenWidth()/Math.max(1,width), sy=(double)window.getScreenHeight()/Math.max(1,height);
         int inset=headerHeight+(authReturn!=null&&authReturn.visible?26:0);
-        SpotifyBrowserViewport.layout(GLFWNativeWin32.glfwGetWin32Window(window.handle()),(int)Math.round((left+4)*sx),(int)Math.round((top+inset)*sy),
+        SpotifyBrowserViewport.layout(org.lwjgl.sdl.SDLProperties.SDL_GetPointerProperty(org.lwjgl.sdl.SDLVideo.SDL_GetWindowProperties(window.handle()),"SDL.window.win32.hwnd",0L),(int)Math.round((left+4)*sx),(int)Math.round((top+inset)*sy),
             (int)Math.round((panelWidth-8)*sx),(int)Math.round(Math.max(1,panelHeight-inset-4)*sy),true);
     }
     @Override public void tick() {

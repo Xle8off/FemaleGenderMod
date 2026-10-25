@@ -108,7 +108,12 @@ public final class NotificationChatButton extends com.wildfire.client.music.Chat
             if (action == null) return;
             if ("notification".equals(action.kind())) {
                 if(primary){var center=new NotificationCenterScreen(parent);center.openNotification(action.target());Minecraft.getInstance().gui.setScreen(center);}
-            } else if(primary&&"stream".equals(action.kind()))net.minecraft.util.Util.getPlatform().openUri(action.target());
+            } else if(primary&&"stream".equals(action.kind())) {
+                try {
+                    java.awt.Desktop.getDesktop().browse(java.net.URI.create(action.target()));
+                } catch (Exception ignored) {
+                }
+            }
             else if (primary && ("message".equals(action.kind()) || "friend_message".equals(action.kind())))
                 Minecraft.getInstance().gui.setScreen(new NotificationCenterScreen(parent, action.target()));
             else SocialClient.action("message".equals(action.kind()) ? "add" : primary ? "add" : "reject", action.target());

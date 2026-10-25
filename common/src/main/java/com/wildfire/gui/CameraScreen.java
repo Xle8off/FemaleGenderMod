@@ -29,7 +29,7 @@ public final class CameraScreen extends Screen {
     private static final class PreviewTexture extends DynamicTexture {
         PreviewTexture(NativeImage image){
             super(()->"SpringPlus local camera preview",image);
-            sampler=com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getClampToEdge(com.mojang.blaze3d.textures.FilterMode.LINEAR);
+            sampler=com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getClampToEdge(com.mojang.renderpearl.api.textures.FilterMode.LINEAR);
         }
     }
     public CameraScreen(Screen parent){
@@ -172,10 +172,10 @@ public final class CameraScreen extends Screen {
     @Override public boolean mouseScrolled(double x,double y,double dx,double dy){if(dropdown>=0){dropScroll=Math.clamp(dropScroll-(int)Math.signum(dy),0,Math.max(0,options.size()-6));return true;}return super.mouseScrolled(x,y,dx,dy);}
     @Override public boolean keyPressed(net.minecraft.client.input.KeyEvent event){
         if(dropdown>=0){
-            if(event.key()==256||event.key()==258){dropdown=-1;return true;}
-            if((event.key()==257||event.key()==335||event.key()==32)&&!options.isEmpty()){choose(dropSelected);return true;}
-            if((event.key()==264||event.key()==265)&&!options.isEmpty()){
-                dropSelected=Math.clamp(dropSelected+(event.key()==264?1:-1),0,options.size()-1);
+            if(event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE||event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_TAB){dropdown=-1;return true;}
+            if((event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_RETURN||event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_NUMPADENTER||event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_SPACE)&&!options.isEmpty()){choose(dropSelected);return true;}
+            if((event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_DOWN||event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_UP)&&!options.isEmpty()){
+                dropSelected=Math.clamp(dropSelected+(event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_DOWN?1:-1),0,options.size()-1);
                 if(dropSelected<dropScroll)dropScroll=dropSelected;if(dropSelected>=dropScroll+6)dropScroll=dropSelected-5;
             }
             return true;

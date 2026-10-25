@@ -25,7 +25,7 @@ public final class CustomDurationScreen extends FixedModerationScreen {
         accept.accept(value);minecraft.gui.setScreen(parent);
     }
     @Override public void onClose(){minecraft.gui.setScreen(parent);}
-    @Override public boolean keyPressed(KeyEvent event){if(event.key()==257||event.key()==335){apply();return true;}return super.keyPressed(event);}
+    @Override public boolean keyPressed(KeyEvent event){if(event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_RETURN||event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_NUMPADENTER){apply();return true;}return super.keyPressed(event);}
     @Override protected void drawMenu(GuiGraphicsExtractor g,int mx,int my,float delta){
         g.centeredText(font,"Свой срок наказания",width/2,height/2-60,0xFFFFFFFF);
         g.centeredText(font,"s — секунды · m — минуты · h — часы · d — дни",width/2,height/2-40,0xFFADBDDD);

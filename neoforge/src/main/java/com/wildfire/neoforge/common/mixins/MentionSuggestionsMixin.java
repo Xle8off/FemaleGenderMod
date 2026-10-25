@@ -84,13 +84,13 @@ abstract class MentionSuggestionsMixin {
         springplus$update();
         if (springplus$matches.isEmpty()) return;
         int key = event.key();
-        if (key == 264 || key == 265) {
-            springplus$selected = Math.floorMod(springplus$selected + (key == 264 ? 1 : -1), springplus$matches.size());
+        if (key == com.mojang.blaze3d.platform.InputConstants.KEY_DOWN || key == com.mojang.blaze3d.platform.InputConstants.KEY_UP) {
+            springplus$selected = Math.floorMod(springplus$selected + (key == com.mojang.blaze3d.platform.InputConstants.KEY_DOWN ? 1 : -1), springplus$matches.size());
             ci.setReturnValue(true);
-        } else if (key == 258) {
+        } else if (key == com.mojang.blaze3d.platform.InputConstants.KEY_TAB) {
             springplus$complete(springplus$selected);
             ci.setReturnValue(true);
-        } else if (key == 256) {
+        } else if (key == com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE) {
             springplus$dismissed = springplus$query;
             springplus$matches = List.of();
             ci.setReturnValue(true);

@@ -96,11 +96,11 @@ public class WildfireSlider extends AbstractWidget implements IFancyFontRenderer
 
    public boolean keyPressed(KeyEvent event) {
       int keyCode = event.key();
-      if (keyCode != 263 && keyCode != 262) {
+      if (keyCode != com.mojang.blaze3d.platform.InputConstants.KEY_LEFT && keyCode != com.mojang.blaze3d.platform.InputConstants.KEY_RIGHT) {
          return super.keyPressed(event);
       }
 
-      this.value = this.value + (keyCode == 263 ? -this.arrowKeyStep : this.arrowKeyStep);
+      this.value = this.value + (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_LEFT ? -this.arrowKeyStep : this.arrowKeyStep);
       this.value = WildfireHelper.snapToStep(Math.clamp(this.value, 0.0, 1.0), this.arrowKeyStep);
       this.applyValue();
       this.updateMessage();
@@ -113,7 +113,7 @@ public class WildfireSlider extends AbstractWidget implements IFancyFontRenderer
 
    public boolean keyReleased(KeyEvent event) {
       int keyCode = event.key();
-      if (keyCode != 263 && keyCode != 262) {
+      if (keyCode != com.mojang.blaze3d.platform.InputConstants.KEY_LEFT && keyCode != com.mojang.blaze3d.platform.InputConstants.KEY_RIGHT) {
          return super.keyReleased(event);
       }
 

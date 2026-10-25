@@ -75,7 +75,7 @@ public final class LocalModerationAnimation {
                 .create(level,net.minecraft.world.entity.EntitySpawnReason.COMMAND);
             if(!(entity instanceof net.minecraft.world.entity.monster.warden.Warden real)){clear();return false;}
             warden=real;while(level.getEntity(nextId)!=null)nextId--;warden.setId(nextId--);
-            warden.setNoAi(true);warden.setNoGravity(true);warden.setInvulnerable(true);warden.setSilent(true);
+            warden.setNoAi(true);warden.setNoGravity(true);warden.setPermanentlyInvulnerable(true);warden.setSilent(true);
             warden.setPos(origin.x,origin.y,origin.z-3.4);warden.setOldPosAndRot();level.addEntity(warden);
         }
         for(var part:dev.aeltorx.inflow.common.SceneModel.build(style.name()))
@@ -87,7 +87,7 @@ public final class LocalModerationAnimation {
         var entity = new Display.BlockDisplay(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getValue(
                 net.minecraft.resources.Identifier.withDefaultNamespace("block_display")), level);
         while (level.getEntity(nextId) != null) nextId--;
-        entity.setId(nextId--); entity.setNoGravity(true); entity.setInvulnerable(true);
+        entity.setId(nextId--); entity.setNoGravity(true); entity.setPermanentlyInvulnerable(true);
         ((BlockDisplayAccess) entity).windowsmenu$block(block.defaultBlockState());
         var access = (DisplayAccess) entity;
         access.windowsmenu$transform(new Transformation(new Vector3f(), new Quaternionf(),
@@ -135,7 +135,7 @@ public final class LocalModerationAnimation {
                 head.set(net.minecraft.core.component.DataComponents.PROFILE,net.minecraft.world.item.component.ResolvableProfile.createResolved(victim.getGameProfile()));
                 visualVictim.applyComponentsFromItemStack(head);
                 while(level.getEntity(nextId)!=null)nextId--;visualVictim.setId(nextId--);
-                visualVictim.setNoGravity(true);visualVictim.setInvulnerable(true);visualVictim.setSilent(true);
+                visualVictim.setNoGravity(true);visualVictim.setPermanentlyInvulnerable(true);visualVictim.setSilent(true);
                 for(var slot:java.util.List.of(net.minecraft.world.entity.EquipmentSlot.HEAD,net.minecraft.world.entity.EquipmentSlot.CHEST,
                     net.minecraft.world.entity.EquipmentSlot.LEGS,net.minecraft.world.entity.EquipmentSlot.FEET,
                     net.minecraft.world.entity.EquipmentSlot.MAINHAND,net.minecraft.world.entity.EquipmentSlot.OFFHAND))visualVictim.setItemSlot(slot,victim.getItemBySlot(slot).copy());

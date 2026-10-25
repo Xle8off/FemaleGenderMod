@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
 
 /** Checks the trusted release endpoint at login and while the client remains online. */
 public final class ModUpdate {
-    private static final String BASE = "https://skin.springplus.net/api/mod-release/neoforge/26.2";
+    private static final String BASE = "https://skin.springplus.net/api/mod-release/neoforge/26.3";
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
     private static volatile boolean pending;
     private static volatile boolean declined;
@@ -50,7 +50,7 @@ public final class ModUpdate {
             updateHudState = 3;
             String url = manualDownloadUrl;
             if (url != null && url.matches(java.util.regex.Pattern.quote(BASE) + "/[a-f0-9]{64}\\.jar"))
-                net.minecraft.util.Util.getPlatform().openUri(url);
+                org.lwjgl.sdl.SDLMisc.SDL_OpenURL(url);
         }
     }
     private static volatile boolean legacyBackupCleanupStarted;
@@ -555,7 +555,7 @@ public final class ModUpdate {
         Path current = Path.of(ModUpdate.class.getProtectionDomain().getCodeSource().getLocation().toURI());
         if (!Files.isRegularFile(current) || !current.getFileName().toString().endsWith(".jar")) throw new IOException("Мод запущен не из JAR");
         if (!release.version.matches("[0-9]+\\.[0-9]+\\.[0-9]+-beta\\.[0-9]+")) throw new IOException("Неверная версия обновления");
-        Path target = current.resolveSibling("SpringPlusCosmetics-neoforge-" + release.version + "+mc26.2.jar");
+        Path target = current.resolveSibling("SpringPlusCosmetics-neoforge-" + release.version + "+mc26.3.jar");
         Path staged = current.resolveSibling(".springplus-update-neoforge-pending.bin");
         Path manifest = current.resolveSibling(".springplus-update-neoforge-pending.txt");
         Path temporary = Files.createTempFile(current.getParent(), ".springplus-update-", ".part");

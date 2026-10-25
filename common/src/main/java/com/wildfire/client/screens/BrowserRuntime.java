@@ -43,7 +43,7 @@ public final class BrowserRuntime {
  private static long lastFrame,lastStatus;private static Object world;private static UUID selected;
  private static BrowserTexture texture;
  private static final class BrowserTexture extends DynamicTexture{
-  BrowserTexture(NativeImage image){super(()->"SpringPlus cinema browser",image);sampler=com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getClampToEdge(com.mojang.blaze3d.textures.FilterMode.LINEAR);}
+  BrowserTexture(NativeImage image){super(()->"SpringPlus cinema browser",image);sampler=com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getClampToEdge(com.mojang.renderpearl.api.textures.FilterMode.LINEAR);}
  }
  static{WORK.schedule(BrowserRuntime::pump,100,TimeUnit.MILLISECONDS);Runtime.getRuntime().addShutdownHook(new Thread(BrowserRuntime::stop,"SpringPlus-browser-shutdown"));}
  private static void pump(){long started=System.nanoTime();try{poll();}finally{WORK.schedule(BrowserRuntime::pump,Math.max(1_000_000L,16_666_667L-(System.nanoTime()-started)),TimeUnit.NANOSECONDS);}}

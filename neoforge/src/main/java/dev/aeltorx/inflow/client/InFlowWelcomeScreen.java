@@ -33,7 +33,7 @@ public final class InFlowWelcomeScreen extends FixedModerationScreen {
  private void finish(){if(finished)return;finished=true;if(connection!=minecraft.getConnection()||!ModerationService.allowed()){minecraft.gui.setScreen(null);return;}next.revealAfterWelcome();minecraft.gui.setScreen(next);}
  @Override public void tick(){if(connection!=minecraft.getConnection()||!ModerationService.allowed()){finished=true;minecraft.gui.setScreen(null);return;}if(uploaded&&ModerationLoadingArt.progress(System.nanoTime()-start)>=1)finish();}
  @Override public void onClose(){finished=true;minecraft.gui.setScreen(parent);}
- @Override public boolean keyPressed(net.minecraft.client.input.KeyEvent event){if(event.key()==257||event.key()==335||event.key()==32){finish();return true;}return super.keyPressed(event);}
+ @Override public boolean keyPressed(net.minecraft.client.input.KeyEvent event){if(event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_RETURN||event.key()==com.mojang.blaze3d.platform.InputConstants.KEY_NUMPADENTER||event.key()==32){finish();return true;}return super.keyPressed(event);}
  @Override protected boolean clickMenu(net.minecraft.client.input.MouseButtonEvent event,boolean twice){var b=ModerationWindowBounds.of(width,height);if(System.nanoTime()-start>150_000_000L&&event.x()>=b.x()&&event.x()<b.x()+b.width()&&event.y()>=b.y()&&event.y()<b.y()+b.height())finish();return true;}
  @Override protected void drawMenu(GuiGraphicsExtractor g,int mx,int my,float partial){
   if(!uploaded)return;var b=ModerationWindowBounds.of(width,height);double progress=ModerationLoadingArt.progress(System.nanoTime()-start);

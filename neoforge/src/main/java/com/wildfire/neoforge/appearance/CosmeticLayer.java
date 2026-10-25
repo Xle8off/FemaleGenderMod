@@ -396,7 +396,7 @@ public final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerMo
 
     private static void render(SubmitNodeCollector queue, PlayerModel model, AvatarRenderState state, PoseStack pose,
                                net.minecraft.client.renderer.rendertype.RenderType type, int light, int overlay, int color) {
-        if (color != 0) queue.submitModel(model, state, pose, type, light, overlay, color, null, state.outlineColor, null);
+        if (color != 0) queue.submitModel(model, state, pose, type, light, overlay, color, null, state.outlineColor);
     }
 
     private static void renderPet(SubmitNodeCollector queue, PlayerModel model, AvatarRenderState state,
@@ -520,7 +520,7 @@ public final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerMo
         if(!walking)pose.translate(0, Math.sin(state.ageInTicks * 0.14f) * 0.04f * inverseScale, 0);
         float petScale = (float)(0.32 * 0.9375 * inverseScale);
         pose.scale(petScale, petScale, petScale);
-        if(turn!=0)pose.mulPose(Axis.YP.rotationDegrees(turn));
+        if(turn!=0)pose.rotate(Axis.YP.rotationDegrees(turn));
         render(queue, model, state, pose, type, light, overlay, color);
         if (secondModel != null) render(queue, secondModel, state, pose, type, light, overlay, secondColor);
         pose.popPose();
@@ -556,7 +556,7 @@ public final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerMo
             if(camera==null)return;
             var pose=event.getPoseStack();pose.pushPose();
             pose.translate(state.x-camera.x,state.y-camera.y,state.z-camera.z);
-            pose.mulPose(Axis.YP.rotationDegrees(180f-state.bodyRot));
+            pose.rotate(Axis.YP.rotationDegrees(180f-state.bodyRot));
             pose.scale(-0.9375f,-0.9375f,0.9375f);pose.translate(0,-1.501f,0);
             renderRelationship(event.getSubmitNodeCollector(),state,pose,state.lightCoords,
                 LivingEntityRenderer.getOverlayCoords(state,0),frame.owner,frame.pet);
@@ -578,7 +578,7 @@ public final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerMo
         var pose = event.getPoseStack();
         pose.pushPose();
         pose.translate(state.x - camera.x, state.y - camera.y, state.z - camera.z);
-        pose.mulPose(Axis.YP.rotationDegrees(180f - state.bodyRot));
+        pose.rotate(Axis.YP.rotationDegrees(180f - state.bodyRot));
         pose.scale(-0.9375f, -0.9375f, 0.9375f);
         pose.translate(0, -1.501f, 0);
         renderPet(event.getSubmitNodeCollector(), model, state, pose, RenderTypes.entityCutout(texture),

@@ -88,7 +88,7 @@
     "female_gender_mod.cloud.automatic": "Synchronisation automatique: %s",
     "female_gender_mod.cloud.automatic.tooltip.line1": "Si activé, votre configuration sera automatiquement synchronisée avec le cloud après toute modification.",
     "female_gender_mod.cloud.automatic.tooltip.line2": "Vous pouvez toujours synchroniser manuellement avec le bouton ci-dessous si cela est désactivé.",
-    
+
     "female_gender_mod.cloud.sync": "Synchroniser maintenant",
     "female_gender_mod.cloud.syncing": "Synchronisation...",
     "female_gender_mod.cloud.syncing.success": "Synchronisé",
@@ -104,7 +104,7 @@
     "female_gender_mod.sync_log.authenticating": "Authentification...",
     "female_gender_mod.sync_log.authentication_failed": "Authentification échouée.",
     "female_gender_mod.sync_log.reauthenticating": "Ré-authentification...",
-    
+
     "female_gender_mod.sync_log.failed_to_sync_data": "La synchronisation a échoué.",
     "female_gender_mod.sync_log.attempting_sync": "Synchronisation du profil...",
     "female_gender_mod.sync_log.sync_success": "Synchronisation réussie.",

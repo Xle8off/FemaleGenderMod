@@ -1,7 +1,7 @@
 package com.wildfire.client.cloud;
 
-import com.mojang.authlib.minecraft.MinecraftSessionService;
-import com.mojang.authlib.yggdrasil.YggdrasilMinecraftSessionService;
+import com.mojang.authlib.minecraft.SessionService;
+import com.mojang.authlib.services.MinecraftServicesSessionService;
 import com.wildfire.client.ClientHelper;
 import com.wildfire.common.WildfireGender;
 import net.minecraft.client.Minecraft;
@@ -14,19 +14,19 @@ public final class CloudUtils {
       throw new UnsupportedOperationException();
    }
 
-   static MinecraftSessionService getSessionService() {
+   static SessionService getSessionService() {
       return Minecraft.getInstance().services().sessionService();
    }
 
    static boolean hasTheSessionServiceBeenTamperedWith() {
-      MinecraftSessionService sessionService = getSessionService();
-      if (sessionService.getClass() != YggdrasilMinecraftSessionService.class) {
+      SessionService sessionService = getSessionService();
+      if (sessionService.getClass() != MinecraftServicesSessionService.class) {
          logSessionTamperWarning(
             "Detected likely session service tampering; got {} instead of the expected Yggdrasil session service", sessionService.getClass()
          );
          return true;
       } else if (!ClientHelper.INSTANCE
-         .validateSessionUrl((YggdrasilMinecraftSessionService)sessionService, "https://sessionserver.mojang.com/session/minecraft/")) {
+         .validateSessionUrl((MinecraftServicesSessionService)sessionService, "https://sessionserver.mojang.com/session/minecraft/")) {
          logSessionTamperWarning("Detected likely session service tampering; Yggdrasil base URL is not the expected Mojang-provided value");
          return true;
       } else {

@@ -1,7 +1,7 @@
 {
 	"modmenu.nameTranslation.female_gender_mod": "女性性別模組",
 	"modmenu.descriptionTranslation.female_gender_mod": "透過增加胸部為玩家模型添加額外的自訂選項，使其外觀更具女性特徵",
-  
+
 	"key.category.female_gender_mod.generic": "女性性別模組",
 	"key.female_gender_mod.gender_menu": "女性性別選單",
 	"key.female_gender_mod.toggle": "切換胸部渲染",

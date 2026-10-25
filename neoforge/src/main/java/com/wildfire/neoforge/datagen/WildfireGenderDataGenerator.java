@@ -40,6 +40,6 @@ public class WildfireGenderDataGenerator {
         PackOutput output = gen.getPackOutput();
         gen.addProvider(true, new WildfireLangProvider(output, WildfireAPI.MODID));
         gen.addProvider(true, new WildfireSoundsProvider(output, WildfireAPI.MODID));
-        gen.addProvider(true, new WildfireGenderArmorProvider(output, event.getLookupProvider(), WildfireAPI.MODID));
+        gen.addProvider(true, new WildfireGenderArmorProvider(output, event.getWorldLookupProvider(), WildfireAPI.MODID));
 	}
 }

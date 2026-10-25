@@ -18,7 +18,7 @@
 
 package com.wildfire.neoforge.client;
 
-import com.mojang.authlib.yggdrasil.YggdrasilMinecraftSessionService;
+import com.mojang.authlib.services.MinecraftServicesSessionService;
 import com.wildfire.api.WildfireAPI;
 import com.wildfire.client.ClientHelper;
 import com.wildfire.common.WildfireGender;
@@ -53,9 +53,12 @@ public class NeoClientHelper implements ClientHelper {
     }
 
     @Override
-    public boolean validateSessionUrl(final YggdrasilMinecraftSessionService service, final String expected) {
+    public boolean validateSessionUrl(final MinecraftServicesSessionService service, final String expected) {
         //Note: We need to use reflection here as Neo protects certain packages from coremods
-        String baseUrl = ObfuscationReflectionHelper.getPrivateValue(YggdrasilMinecraftSessionService.class, service, "baseUrl");
-        return Objects.equals(baseUrl, expected);
+        try {
+            com.mojang.authlib.services.MinecraftServicesDiscoveryService discovery = ObfuscationReflectionHelper.getPrivateValue(MinecraftServicesSessionService.class, service, "discoveryService");
+            var uri=java.net.URI.create(discovery.getUrl(com.mojang.authlib.services.response.discovery.Service.SESSION,"join"));
+            return "https".equals(uri.getScheme())&&uri.getUserInfo()==null&&(uri.getPort()==-1||uri.getPort()==443)&&java.util.Set.of("sessionserver.mojang.com","api.minecraftservices.com").contains(uri.getHost());
+        } catch(RuntimeException invalid) {return false;}
     }
 }

@@ -8,7 +8,13 @@ val webrtcNatives by configurations.creating {
     isCanBeConsumed = false
     isCanBeResolved = true
 }
+val dialogNatives by configurations.creating
 dependencies {
+    implementation("org.lwjgl:lwjgl-tinyfd:3.4.1")
+    jarJar("org.lwjgl:lwjgl-tinyfd:3.4.1")
+    for (platform in listOf("windows", "windows-arm64", "linux", "macos", "macos-arm64")) {
+        dialogNatives("org.lwjgl:lwjgl-tinyfd:3.4.1:natives-$platform")
+    }
     implementation("dev.onvoid.webrtc:webrtc-java:0.19.0") { isTransitive = false }
     jarJar("dev.onvoid.webrtc:webrtc-java:0.19.0") { isTransitive = false }
     for (platform in listOf("windows-x86_64", "windows-aarch64", "linux-x86_64", "linux-aarch64", "linux-aarch32", "macos-x86_64", "macos-aarch64")) {
@@ -18,6 +24,7 @@ dependencies {
     jarJar("javazoom:jlayer:1.0.1")
 }
 tasks.processResources {
+    from(provider { dialogNatives.files.map { zipTree(it) } }) { include("**/*.dll", "**/*.so", "**/*.dylib") }
     // Recovered common assets overlap generated locale files; prefer the loader's
     // own/generated resources, which are visited first.
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE

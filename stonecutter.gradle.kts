@@ -4,7 +4,7 @@ import com.wildfire.ValidateJson
 
 plugins {
     id("dev.kikugie.stonecutter")
-    id("net.neoforged.moddev") version "2.0.143" apply false
+    id("net.neoforged.moddev") version "2.0.148" apply false
     id("net.fabricmc.fabric-loom") version "1.17-SNAPSHOT" apply false
     id("idea")
 }
@@ -17,7 +17,7 @@ idea {
     }
 }
 
-stonecutter active "26.2"
+stonecutter active "26.3"
 
 tasks.register("generatePackageInfos") {
     description = "Generates package-info files for any packages that are missing them"

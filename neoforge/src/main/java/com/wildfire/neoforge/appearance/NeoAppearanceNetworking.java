@@ -38,19 +38,16 @@ public final class NeoAppearanceNetworking {
         com.wildfire.client.screens.ScreenClient.configure(bytes->OptionalPayloadSender.sendToServer(new com.wildfire.client.screens.ScreenPacket(bytes)),()->Minecraft.getInstance().getConnection()!=null&&Minecraft.getInstance().getConnection().hasChannel(com.wildfire.client.screens.ScreenPacket.TYPE));
         com.wildfire.client.vr.VrPoseClient.configure(()->net.neoforged.fml.ModList.get().isLoaded("vivecraft"));
         if(!net.neoforged.fml.ModList.get().isLoaded("vivecraft")){
-            event.registrar("springplus_vivecraft_observer").optional().playBidirectional(com.wildfire.client.vr.VrPosePacket.TYPE,com.wildfire.client.vr.VrPosePacket.CODEC,
-                (packet,context)->{},
+            event.registrar("springplus_vivecraft_observer").optional().playBidirectional(com.wildfire.client.vr.VrPosePacket.TYPE,com.wildfire.client.vr.VrPosePacket.CODEC,(packet,context)->{},
                 (packet,context)->context.enqueueWork(()->com.wildfire.client.vr.VivecraftObserver.accept(packet.data())));
             com.wildfire.client.vr.VivecraftObserver.configure(bytes->OptionalPayloadSender.sendToServer(new com.wildfire.client.vr.VrPosePacket(bytes)),
                 ()->Minecraft.getInstance().getConnection()!=null&&Minecraft.getInstance().getConnection().hasChannel(com.wildfire.client.vr.VrPosePacket.TYPE));
         }
-        packets.playBidirectional(com.wildfire.client.overhead.CameraPacket.TYPE,com.wildfire.client.overhead.CameraPacket.CODEC,
-            (packet,context)->{},
+        packets.playBidirectional(com.wildfire.client.overhead.CameraPacket.TYPE,com.wildfire.client.overhead.CameraPacket.CODEC,(packet,context)->{},
             (packet,context)->context.enqueueWork(()->com.wildfire.client.overhead.CameraClient.accept(packet.json())));
         com.wildfire.client.overhead.CameraClient.configure(value->OptionalPayloadSender.sendToServer(new com.wildfire.client.overhead.CameraPacket(value)),
             ()->Minecraft.getInstance().getConnection()!=null&&Minecraft.getInstance().getConnection().hasChannel(com.wildfire.client.overhead.CameraPacket.TYPE));
-        packets.playBidirectional(com.wildfire.client.towns.TownsPacket.TYPE,com.wildfire.client.towns.TownsPacket.CODEC,
-            (packet,context)->{},
+        packets.playBidirectional(com.wildfire.client.towns.TownsPacket.TYPE,com.wildfire.client.towns.TownsPacket.CODEC,(packet,context)->{},
             (packet,context)->context.enqueueWork(()->com.wildfire.client.towns.TownsClient.accept(packet.data())));
         com.wildfire.client.towns.TownsClient.configure(bytes->OptionalPayloadSender.sendToServer(new com.wildfire.client.towns.TownsPacket(bytes)),
             ()->Minecraft.getInstance().getConnection()!=null&&Minecraft.getInstance().getConnection().hasChannel(com.wildfire.client.towns.TownsPacket.TYPE));
@@ -59,11 +56,9 @@ public final class NeoAppearanceNetworking {
         com.wildfire.gui.LastSeenLabel.setGenderResolver(GenderedNotifications::gender);
         com.wildfire.client.towns.TownsClient.setOpenHandler(()->{var client=Minecraft.getInstance();if(!(client.gui.screen() instanceof com.wildfire.gui.TownsScreen))client.gui.setScreen(new com.wildfire.gui.TownsScreen(client.gui.screen()));});
         com.wildfire.client.towns.TownsClient.configureImageTicket(PrivateMessageInbox::requestImageTicket);
-        packets.playBidirectional(MenuPacket.TYPE, MenuPacket.CODEC,
-            (packet,context)->{},
+        packets.playBidirectional(MenuPacket.TYPE, MenuPacket.CODEC,(packet,context)->{},
             (packet, context) -> context.enqueueWork(() -> com.wildfire.client.music.MenuPresence.accept(packet.json())));
-        packets.playBidirectional(ListeningPacket.TYPE, ListeningPacket.CODEC,
-            (packet,context)->{},
+        packets.playBidirectional(ListeningPacket.TYPE, ListeningPacket.CODEC,(packet,context)->{},
             (packet, context) -> context.enqueueWork(() -> com.wildfire.client.music.ListeningState.accept(packet.json())));
         packets.playToClient(ChatStatePacket.TYPE, ChatStatePacket.CODEC,
             (packet, context) -> context.enqueueWork(() -> com.wildfire.gui.PublicChatState.acceptControl(packet.state())));

@@ -209,7 +209,7 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
       }
 
       if (this.bounceEnabled && !softMesh) {
-         matrixStack.mulPose(Axis.YP.rotationDegrees(side.forSide(this.lPhysBounceRotation, this.rPhysBounceRotation)));
+         matrixStack.rotate(Axis.YP.rotationDegrees(side.forSide(this.lPhysBounceRotation, this.rPhysBounceRotation)));
       }
 
       if (!this.isUniboob) {
@@ -241,7 +241,7 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
          rotationTransform.rotateX(f5 * (float) (Math.PI / 180.0));
       }
 
-      matrixStack.mulPose(rotationTransform);
+      matrixStack.rotate(rotationTransform);
       if (this.bounceEnabled) {
          TorsoMotionPhysics.Motion motion = TorsoMotionPhysics.sample(genderState.entityUUID, model.root(), model.body, state.ageInTicks);
          if (softMesh) {
@@ -263,8 +263,8 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
             this.deformationX = movement.x() * this.softPhysicsScale;
             this.deformationY = movement.y() * this.softPhysicsScale;
          } else {
-            matrixStack.mulPose(Axis.XP.rotationDegrees(motion.pitch()));
-            matrixStack.mulPose(Axis.ZP.rotationDegrees(side.leftOrNegate(motion.roll())));
+            matrixStack.rotate(Axis.XP.rotationDegrees(motion.pitch()));
+            matrixStack.rotate(Axis.ZP.rotationDegrees(side.leftOrNegate(motion.roll())));
          }
       }
 
@@ -291,9 +291,7 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
             overlayCoords,
             baseColor,
             null,
-            state.outlineColor,
-            null
-         );
+            state.outlineColor);
          if (genderState.hasJacketLayer) {
             poseStack.translate(0.0F, 0.0F, -0.015F);
             poseStack.scale(1.05F, 1.05F, 1.05F);
@@ -308,9 +306,7 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
                   overlayCoords,
                   baseColor,
                   null,
-                  state.outlineColor,
-                  null
-               );
+                  state.outlineColor);
          }
 
          int shirt = AppearanceState.cosmetics(genderState.entityUUID).shirt();
@@ -332,9 +328,7 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
                   overlayCoords,
                   color,
                   null,
-                  state.outlineColor,
-                  null
-               );
+                  state.outlineColor);
          }
       }
    }

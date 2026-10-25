@@ -9,8 +9,8 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 /** Native NeoForge bootstrap. Server permissions remain authoritative. */
 public final class InFlowClient {
  private static boolean initialized;
- private static final KeyMapping WHEEL=new KeyMapping("key.inflow.wheel",org.lwjgl.glfw.GLFW.GLFW_KEY_F9,KeyMapping.Category.MISC);
- private static final KeyMapping PANEL=new KeyMapping("key.inflow.panel",org.lwjgl.glfw.GLFW.GLFW_KEY_F10,KeyMapping.Category.MISC);
+ private static final KeyMapping WHEEL=new KeyMapping("key.inflow.wheel",com.mojang.blaze3d.platform.InputConstants.KEY_F9,KeyMapping.Category.MISC);
+ private static final KeyMapping PANEL=new KeyMapping("key.inflow.panel",com.mojang.blaze3d.platform.InputConstants.KEY_F10,KeyMapping.Category.MISC);
  public static void register(IEventBus bus){
   if(initialized)return;initialized=true;ModerationRules.load();
   bus.addListener(RegisterKeyMappingsEvent.class,e->{e.register(WHEEL);e.register(PANEL);});

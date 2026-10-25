@@ -232,7 +232,7 @@ public class BreastPhysics {
    }
 
    private void tickArmSwing(LivingEntity entity, RandomSource random, float bounceIntensity) {
-      int swingDuration = entity.getCurrentSwingDuration();
+      int swingDuration = (entity.getCurrentSwing()==null?6:entity.getCurrentSwing().durationTicks());
       if ((swingDuration > 1 || this.lastSwingDuration > 1) && entity.getPose() != Pose.SLEEPING) {
          float rawAmplifier = 0.0F;
          if (swingDuration < 6) {
@@ -242,12 +242,12 @@ public class BreastPhysics {
          }
 
          float amplifier = Math.clamp(1.0F + rawAmplifier, 0.6F, 1.3F);
-         HumanoidArm swingingArm = entity.swingingArm == InteractionHand.MAIN_HAND ? entity.getMainArm() : entity.getMainArm().getOpposite();
-         int swingTickDelta = entity.swingTime - this.lastSwingTick;
+         HumanoidArm swingingArm = (entity.getCurrentSwing()==null?InteractionHand.MAIN_HAND:entity.getCurrentSwing().hand()) == InteractionHand.MAIN_HAND ? entity.getMainArm() : entity.getMainArm().getOpposite();
+         int swingTickDelta = (int)(entity.getSwingAnimation(0)*swingDuration) - this.lastSwingTick;
          float swingProgress = distanceFromMedian(0, this.lastSwingDuration, Math.clamp(this.lastSwingTick, 0, this.lastSwingDuration));
          HumanoidArm swingingToward = swingProgress > -0.2F ? swingingArm.getOpposite() : swingingArm;
          int everyNthTick = Math.clamp(swingDuration - 1, 1, 5);
-         if (entity.swinging && entity.tickCount % everyNthTick == 0) {
+         if (entity.isSwinging() && entity.tickCount % everyNthTick == 0) {
             this.targetBounceY = this.targetBounceY + (random.nextBoolean() ? -0.25F : 0.25F) * amplifier * bounceIntensity;
             float xAmp = Math.clamp(1.0F + rawAmplifier * (rawAmplifier < 0.0F ? 1.625F : 0.8F), 0.25F, 1.225F);
             this.targetBounceX = 0.325F * xAmp * bounceIntensity * (swingingArm == HumanoidArm.RIGHT ? -1.0F : 1.0F);
@@ -255,14 +255,14 @@ public class BreastPhysics {
 
          if (swingTickDelta < 0 && this.lastSwingTick != this.lastSwingDuration - 1) {
             this.targetRotVel = this.targetRotVel + (swingingArm == HumanoidArm.RIGHT ? -4.0F : 4.0F) * Math.abs(swingProgress) * bounceIntensity;
-         } else if (entity.swinging && swingDuration > 1) {
+         } else if (entity.isSwinging() && swingDuration > 1) {
             this.targetRotVel = this.targetRotVel + (swingingToward == HumanoidArm.RIGHT ? -0.2F : 0.2F) * amplifier * bounceIntensity;
          }
 
-         this.lastSwingTick = entity.swingTime;
+         this.lastSwingTick = (int)(entity.getSwingAnimation(0)*swingDuration);
       }
 
-      if (!entity.swinging) {
+      if (!entity.isSwinging()) {
          this.lastSwingTick = 0;
       }
 
