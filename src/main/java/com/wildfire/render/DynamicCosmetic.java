@@ -153,7 +153,8 @@ public final class DynamicCosmetic {
                 JsonArray cubePivot=vector(cube,"pivot",px,py,pz);
                 float cx=value(cubePivot,0),cy=value(cubePivot,1),cz=value(cubePivot,2);
                 JsonArray cubeRot=vector(cube,"rotation",0,0,0);
-                float inflate=cube.has("inflate")?cube.get("inflate").getAsFloat():0f;
+                float inflate=cube.has("inflate")?cube.get("inflate").getAsFloat()
+                    :bone.has("inflate")?bone.get("inflate").getAsFloat():0f;
                 CubeListBuilder box=CubeListBuilder.create().texOffs((int)value(uv,0),(int)value(uv,1))
                     .addBox(value(origin,0)-cx,cy-value(origin,1)-value(size,1),value(origin,2)-cz,
                         value(size,0),value(size,1),value(size,2),new CubeDeformation(inflate));
@@ -178,21 +179,16 @@ public final class DynamicCosmetic {
         return pack.getAsJsonObject("model").has("format_version")&&!id.startsWith("geometry.springplus.");
     }
     private static JsonArray tuple(float... values){JsonArray result=new JsonArray();for(float v:values)result.add(v);return result;}
-    private static void mirrorPoint(JsonObject object,String key){if(object.has(key)){JsonArray v=object.getAsJsonArray(key);object.add(key,tuple(-value(v,0),value(v,1),value(v,2)));}}
-    private static void bedrockRotation(JsonObject object){if(object.has("rotation")){JsonArray v=object.getAsJsonArray("rotation");object.add("rotation",tuple(-value(v,0),-value(v,1),value(v,2)));}}
     private static void face(JsonObject faces,String name,float u,float v,float w,float h){
         JsonObject face=new JsonObject();face.add("uv",tuple(u,v));face.add("uv_size",tuple(w,h));faces.add(name,face);
     }
     private static JsonObject blockbenchGeometry(JsonObject source){
         JsonObject geometry=source.deepCopy();
         for(var element:geometry.getAsJsonArray("bones")){
-            JsonObject bone=element.getAsJsonObject();mirrorPoint(bone,"pivot");bedrockRotation(bone);
+            JsonObject bone=element.getAsJsonObject();
             if(!bone.has("cubes"))continue;
             for(var item:bone.getAsJsonArray("cubes")){
-                JsonObject cube=item.getAsJsonObject();JsonArray origin=cube.getAsJsonArray("origin"),size=cube.getAsJsonArray("size");
-                cube.add("origin",tuple(-value(origin,0)-value(size,0),value(origin,1),value(origin,2)));
-                if(cube.has("rotation")&&!cube.has("pivot"))cube.add("pivot",tuple(0,0,0));
-                mirrorPoint(cube,"pivot");bedrockRotation(cube);
+                JsonObject cube=item.getAsJsonObject();JsonArray size=cube.getAsJsonArray("size");
                 if(cube.get("uv").isJsonArray()){
                     JsonArray uv=cube.getAsJsonArray("uv");float u=value(uv,0),v=value(uv,1),w=value(size,0),h=value(size,1),d=value(size,2);
                     JsonObject faces=new JsonObject();
@@ -206,12 +202,6 @@ public final class DynamicCosmetic {
                         JsonElement east=faces.get("east");faces.add("east",faces.get("west"));faces.add("west",east);
                     }
                     cube.add("uv",faces);
-                }else for(String name:new String[]{"up","down"}){
-                    JsonObject faces=cube.getAsJsonObject("uv");if(!faces.has(name))continue;
-                    JsonObject face=faces.getAsJsonObject(name);JsonArray uv=face.getAsJsonArray("uv");
-                    JsonArray extent=face.has("uv_size")?face.getAsJsonArray("uv_size"):tuple(value(size,0),value(size,2));
-                    face.add("uv",tuple(value(uv,0)+value(extent,0),value(uv,1)+value(extent,1)));
-                    face.add("uv_size",tuple(-value(extent,0),-value(extent,1)));
                 }
             }
         }
@@ -224,7 +214,9 @@ public final class DynamicCosmetic {
         float inflate=definition.has("inflate")?definition.get("inflate").getAsFloat():0;
         for(int i=0;i<cube.polygons.length;i++){
             var polygon=cube.polygons[i];var normal=polygon.normal();
-            String face=normal.x()>0.5f?"east":normal.x()<-0.5f?"west":
+            // Bedrock's X axis is mirrored relative to Blockbench's viewport:
+            // its east face is ModelPart's negative-X face and vice versa.
+            String face=normal.x()>0.5f?"west":normal.x()<-0.5f?"east":
                 normal.y()<-0.5f?"up":normal.y()>0.5f?"down":normal.z()<0?"north":"south";
             if(!faces.has(face)){
                 cube.polygons[i]=new ModelPart.Polygon(new ModelPart.Vertex[0],normal);continue;
@@ -242,7 +234,7 @@ public final class DynamicCosmetic {
                 float x=(vertex.x()-cube.minX+inflate)/(cube.maxX-cube.minX+2*inflate);
                 float y=(vertex.y()-cube.minY+inflate)/(cube.maxY-cube.minY+2*inflate);
                 float z=(vertex.z()-cube.minZ+inflate)/(cube.maxZ-cube.minZ+2*inflate);
-                float u=switch(face){case "east"->z;case "west"->1-z;case "south"->1-x;default->x;};
+                float u=switch(face){case "east"->1-z;case "west"->z;case "south"->1-x;default->x;};
                 float v=switch(face){case "up"->1-z;case "down"->z;default->y;};
                 for(int turn=0;turn<Math.floorMod(rotation,360)/90;turn++){float old=u;u=1-v;v=old;}
                 vertices[j]=vertex.remap((value(uv,0)+u*du)/width,(value(uv,1)+v*dv)/height);
@@ -264,7 +256,7 @@ public final class DynamicCosmetic {
         private record ScaledBone(ModelPart part,float x,float y,float z){}
         CosmeticModel(ModelPart root,Map<String,JsonObject> definitions,boolean chibi,boolean headwear,float headwearDrop,JsonObject animation,boolean bedrock){
             super(root,false);cosmetic=root.getChild("cosmetic");this.chibi=chibi;this.headwearDrop=headwearDrop;
-            this.previewRoot=cosmetic;this.animationAxes=bedrock?-1f:1f;
+            this.previewRoot=cosmetic;this.animationAxes=1f;
             for(var entry:definitions.entrySet()){
                 JsonObject definition=entry.getValue();
                 if(!definition.has("scale"))continue;

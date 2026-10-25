@@ -111,6 +111,8 @@ public final class WildfireClientEventHandler {//TODO: Move other classes to a c
 
     /// Register all client-side events
     public static void registerClientEvents() {
+        com.wildfire.client.screens.ScreenClient.configureMedia(com.wildfire.client.screens.ScreenInteraction::mediaOffer);
+        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register((player,level,hand,hit)->level.isClientSide()&&com.wildfire.client.screens.ScreenInteraction.use(hit)?net.minecraft.world.InteractionResult.SUCCESS:net.minecraft.world.InteractionResult.PASS);
         com.wildfire.client.music.SpringPlusSession.configure(() -> {
             var client = Minecraft.getInstance();
             return client.player != null && client.level != null && client.isMultiplayerServer() && ServerAppearanceSync.isActive();
@@ -122,6 +124,7 @@ public final class WildfireClientEventHandler {//TODO: Move other classes to a c
         LivingEntityRenderLayerRegistrationCallback.EVENT.register(WildfireClientEventHandler::registerRenderLayers);
         LevelRenderEvents.END_EXTRACTION.register(CosmeticLayer::captureFirstPersonPet);
         LevelRenderEvents.COLLECT_SUBMITS.register(CosmeticLayer::submitFirstPersonPet);
+        LevelRenderEvents.COLLECT_SUBMITS.register(context->com.wildfire.client.screens.ScreenWorldRenderer.submit(context.poseStack(),context.submitNodeCollector(),context.levelState().cameraRenderState));
         HudElementRegistry.attachElementAfter(
             VanillaHudElements.MISC_OVERLAYS,
             WildfireGender.id("player_list"),
@@ -175,6 +178,8 @@ public final class WildfireClientEventHandler {//TODO: Move other classes to a c
             client.gui.setScreen(new com.wildfire.gui.screen.NotificationCenterScreen(screen)));
         notifications.setTooltip(Tooltip.create(Component.literal("Уведомления SpringPlus")));
         Screens.getWidgets(screen).add(notifications);
+        var streams = new com.wildfire.client.music.StreamHudButton(screen);
+        Screens.getWidgets(screen).add(streams);
         var updateButton = new com.wildfire.client.music.UpdateHudButton(ModUpdate::updateHudState, ModUpdate::activateUpdateHud);
         Screens.getWidgets(screen).add(updateButton);
         if (screen instanceof ChatScreen) {
@@ -191,7 +196,7 @@ public final class WildfireClientEventHandler {//TODO: Move other classes to a c
                 else if ("notification".equals(action.kind())) {
                     var center=new com.wildfire.gui.screen.NotificationCenterScreen(screen);
                     center.openNotification(action.target()); client.gui.setScreen(center);
-                }
+                } else if("stream".equals(action.kind()))net.minecraft.util.Util.getPlatform().openUri(action.target());
                 ModUpdate.dismissPopup(displayedId[0]);
             },ModUpdate::popupControlsReveal);
             Button secondary = new com.wildfire.gui.ToastControlButton(116, 0, 106, 20, Component.empty(), button -> {
@@ -212,13 +217,13 @@ public final class WildfireClientEventHandler {//TODO: Move other classes to a c
                 var action = ModUpdate.popupAction(toastSlot);
                 displayedId[0] = ModUpdate.popupId(toastSlot);
                 primary.visible = action != null;
-                secondary.visible = action != null && !"message".equals(action.kind()) && !"friend_message".equals(action.kind());
+                secondary.visible = action != null && !"message".equals(action.kind()) && !"friend_message".equals(action.kind()) && !"stream".equals(action.kind());
                 if (action == null) return;
-                primary.setWidth("friend_message".equals(action.kind()) ? 160 : 100);
+                primary.setWidth("friend_message".equals(action.kind())||"stream".equals(action.kind()) ? 160 : 100);
                 primary.setX(secondary.visible ? 10 : 10 + (212 - primary.getWidth()) / 2);
                 primary.setY(ModUpdate.popupActionY(toastSlot));
                 secondary.setY(ModUpdate.popupActionY(toastSlot));
-                primary.setMessage(Component.literal("friend_message".equals(action.kind()) ? "Написать сообщение" : "notification".equals(action.kind()) ? "Посмотреть" : "message".equals(action.kind()) ? "Ответить" : "Принять"));
+                primary.setMessage(Component.literal("stream".equals(action.kind())?"Смотреть стрим":"friend_message".equals(action.kind()) ? "Написать сообщение" : "notification".equals(action.kind()) ? "Посмотреть" : "message".equals(action.kind()) ? "Ответить" : "Принять"));
                 secondary.setMessage(Component.literal("notification".equals(action.kind()) ? "Закрыть" : "message".equals(action.kind()) ? "В друзья" : "Отклонить"));
             });
             }
@@ -227,6 +232,7 @@ public final class WildfireClientEventHandler {//TODO: Move other classes to a c
             boolean bellVisible = (current instanceof ChatScreen || com.wildfire.client.config.CosmeticPreferences.hudBell()) && !ModUpdate.popupVisible();
             notifications.visible = bellVisible;
             notifications.setY(14 + ModUpdate.topInset());
+            streams.sync(14 + ModUpdate.topInset(), bellVisible);
             updateButton.sync(38 + ModUpdate.topInset(),
                 com.wildfire.client.music.SpringPlusSession.enabled() && !ModUpdate.popupVisible());
             if (current instanceof ChatScreen) com.wildfire.gui.QuickHud.drawTrack(graphics);
@@ -356,10 +362,14 @@ public final class WildfireClientEventHandler {//TODO: Move other classes to a c
 
     /// Perform various actions that should happen once per client tick, such as syncing client player settings to the server.
     private static void onClientTick(Minecraft client) {
+        com.wildfire.client.route.RouteProbeClient.tick(client);
+        com.wildfire.client.screens.ScreenClient.tick(client.getConnection(),client.level);
+        com.wildfire.client.screens.BrowserRuntime.tick(client.level);
+        com.wildfire.client.screens.ScreenInteraction.tickAutoView();
+        com.wildfire.client.discord.DiscordPresence.tick(client,com.wildfire.main.networking.appearance.SocialClient.roleName());
         com.wildfire.client.music.SpringPlusSession.tick();
         if (!com.wildfire.client.music.SpringPlusSession.enabled()) return;
-        com.wildfire.client.music.PersonalMusicPlayer.serverPlaying(com.wildfire.main.networking.appearance.MusicClient.serverActive());
-        com.wildfire.client.music.SpotifyWebPlayer.serverPlaying(com.wildfire.main.networking.appearance.MusicClient.serverActive());
+        com.wildfire.client.music.MusicPriority.tick(com.wildfire.main.networking.appearance.MusicClient.serverActive());
         if (client.level == null || client.player == null) {
             return;
         }
@@ -390,6 +400,8 @@ public final class WildfireClientEventHandler {//TODO: Move other classes to a c
     }
 
     private static void clientJoin(ClientPacketListener var1, PacketSender var2, Minecraft client) {
+        byte[] routeProbe = com.wildfire.client.route.RouteProbeClient.freshPayload();
+        if (routeProbe != null) var2.sendPacket(new com.wildfire.main.networking.appearance.RouteProbePacket(routeProbe));
         // The server sync plugin is the only component allowed to open customization.
     }
 

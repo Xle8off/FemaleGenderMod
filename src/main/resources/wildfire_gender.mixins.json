@@ -7,6 +7,8 @@
         "ArmorStandMixin"
     ],
     "client": [
+        "VrPoseModelMixin",
+        "VrPoseArmorMixin",
         "ServerPlayerInfoSkinMixin",
         "ServerPlayerSkinMixin",
         "ChatScreenFocusAccessor",

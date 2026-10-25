@@ -1,0 +1,15 @@
+package com.wildfire.client.discord;
+import com.google.gson.*;import java.util.concurrent.*;
+/** Explicit live diagnostic: transient labelled activity, cleared on exit. No user data. */
+public final class DiscordActivityProbe {
+ static DiscordIpc.Frame read(DiscordIpc.Endpoint pipe)throws Exception{var future=new CompletableFuture<DiscordIpc.Frame>();Thread.ofPlatform().daemon().start(()->{try{future.complete(pipe.read());}catch(Throwable e){future.completeExceptionally(e);}});return future.get(7,TimeUnit.SECONDS);}
+ static JsonObject json(DiscordIpc.Frame frame){return JsonParser.parseString(new String(frame.data(),java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();}
+ static void activity(DiscordIpc.Endpoint pipe,JsonElement activity,String nonce)throws Exception{var message=new JsonObject();message.addProperty("cmd","SET_ACTIVITY");message.addProperty("nonce",nonce);var args=new JsonObject();args.addProperty("pid",ProcessHandle.current().pid());args.add("activity",activity);message.add("args",args);pipe.write(1,message);var reply=json(read(pipe));System.out.println(nonce+" reply evt="+reply.get("evt"));if(reply.has("data")&&reply.get("data").isJsonObject()){var data=reply.getAsJsonObject("data");if(data.has("code"))System.out.println("code="+data.get("code"));if(data.has("message"))System.out.println("message="+data.get("message"));if(data.has("details"))System.out.println("accepted details="+data.get("details"));if(data.has("name"))System.out.println("accepted name="+data.get("name"));System.out.println("forum field retained="+(data.has("details_url")&&data.get("details_url").getAsString().equals(PresenceSettings.SITE)));}}
+ public static void main(String[] args)throws Exception{var method=DiscordIpc.class.getDeclaredMethod("connect");method.setAccessible(true);try(var pipe=(DiscordIpc.Endpoint)method.invoke(null)){var hello=new JsonObject();hello.addProperty("v",1);hello.addProperty("client_id",PresenceSettings.APPLICATION_ID);pipe.write(0,hello);System.out.println("Handshake="+json(read(pipe)).get("evt"));try{
+  var visibility=new PresenceActivity.Visibility(false,false,false,true);var base=PresenceActivity.build(new PresenceActivity.Snapshot(false,false,"","","","","",0,0),visibility);base.addProperty("details","Проверка Rich Presence");activity(pipe,base,"menu");
+  var active=PresenceActivity.build(new PresenceActivity.Snapshot(true,false,"","","","","Обычный мир",0,0),visibility);active.addProperty("details","Проверка Rich Presence");activity(pipe,active,"server-no-avatar");
+  active.addProperty("details_url",PresenceSettings.SITE);active.addProperty("state_url",PresenceSettings.SITE);activity(pipe,active,"server-with-site");
+  var external=active.deepCopy();external.getAsJsonObject("assets").addProperty("large_image","https://cdn.discordapp.com/app-assets/1512105518779338843/1562198522978107432.png");activity(pipe,external,"server-external-image");
+  var longText=active.deepCopy();longText.addProperty("state","Д".repeat(120));activity(pipe,longText,"server-long-state");
+ }finally{activity(pipe,JsonNull.INSTANCE,"clear");}}}
+}

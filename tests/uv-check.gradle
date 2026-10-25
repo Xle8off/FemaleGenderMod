@@ -19,6 +19,7 @@ allprojects { p ->
     source p.rootProject.file('tests/ServerSkinPriorityCheck.java')
     source p.rootProject.file('tests/PlayerAssetsCheck.java')
     source p.rootProject.file('tests/CapeGifPreviewCheck.java')
+    source p.rootProject.file('tests/VrPoseCheck.java')
     source p.rootProject.file('tests/CampaignClientCheck.java')
     source p.rootProject.file('tests/AvatarBatchCheck.java')
     source p.rootProject.file('tests/PrivateStatusCheck.java')
@@ -60,6 +61,11 @@ allprojects { p ->
     dependsOn compile
     classpath = p.sourceSets.main.runtimeClasspath + files(output)
     mainClass = 'CapeGifPreviewCheck'
+   }
+   p.tasks.register('checkVrPose', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'VrPoseCheck'
    }
    p.tasks.register('checkOverheadMedia', JavaExec) {
     dependsOn compile

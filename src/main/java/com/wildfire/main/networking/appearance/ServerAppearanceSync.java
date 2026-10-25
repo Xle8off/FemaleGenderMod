@@ -32,6 +32,13 @@ public final class ServerAppearanceSync {
     }
 
     public static void registerPayloads() {
+        PayloadTypeRegistry.serverboundPlay().register(RouteProbePacket.TYPE, RouteProbePacket.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(com.wildfire.client.screens.ScreenPacket.TYPE,com.wildfire.client.screens.ScreenPacket.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(com.wildfire.client.screens.ScreenPacket.TYPE,com.wildfire.client.screens.ScreenPacket.CODEC);
+        if(!net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("vivecraft")){
+            PayloadTypeRegistry.clientboundPlay().register(com.wildfire.client.vr.VrPosePacket.TYPE,com.wildfire.client.vr.VrPosePacket.CODEC);
+            PayloadTypeRegistry.serverboundPlay().register(com.wildfire.client.vr.VrPosePacket.TYPE,com.wildfire.client.vr.VrPosePacket.CODEC);
+        }
         PayloadTypeRegistry.serverboundPlay().register(com.wildfire.client.overhead.CameraPacket.TYPE,com.wildfire.client.overhead.CameraPacket.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(com.wildfire.client.overhead.CameraPacket.TYPE,com.wildfire.client.overhead.CameraPacket.CODEC);
         PayloadTypeRegistry.serverboundPlay().register(com.wildfire.client.towns.TownsPacket.TYPE,com.wildfire.client.towns.TownsPacket.CODEC);
@@ -74,13 +81,21 @@ public final class ServerAppearanceSync {
     }
 
     public static void registerClient() {
+        com.wildfire.client.vr.VrPoseClient.configure(()->net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("vivecraft"));
+        if(!net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("vivecraft")){
+            com.wildfire.client.vr.VivecraftObserver.configure(bytes->ClientPlayNetworking.send(new com.wildfire.client.vr.VrPosePacket(bytes)),()->ClientPlayNetworking.canSend(com.wildfire.client.vr.VrPosePacket.TYPE));
+            net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client->com.wildfire.client.vr.VivecraftObserver.tick());
+        }
         com.wildfire.gui.LastSeenLabel.setGenderResolver(GenderedNotifications::gender);
         ClientPlayConnectionEvents.INIT.register((listener, client) -> {
+            if(!net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("vivecraft"))ClientPlayNetworking.registerReceiver(com.wildfire.client.vr.VrPosePacket.TYPE,(packet,context)->context.client().execute(()->com.wildfire.client.vr.VivecraftObserver.accept(packet.data())));
             com.wildfire.client.towns.TownsClient.configure(bytes->ClientPlayNetworking.send(new com.wildfire.client.towns.TownsPacket(bytes)),
                 ()->ClientPlayNetworking.canSend(com.wildfire.client.towns.TownsPacket.TYPE));
             com.wildfire.client.towns.TownsClient.setOpenHandler(()->{if(!(client.gui.screen() instanceof com.wildfire.gui.TownsScreen))client.gui.setScreen(new com.wildfire.gui.TownsScreen(client.gui.screen()));});
             com.wildfire.client.towns.TownsClient.configureImageTicket(PrivateMessageInbox::requestImageTicket);
             ClientPlayNetworking.registerReceiver(com.wildfire.client.towns.TownsPacket.TYPE,(packet,context)->context.client().execute(()->com.wildfire.client.towns.TownsClient.accept(packet.data())));
+            com.wildfire.client.screens.ScreenClient.configure(bytes->ClientPlayNetworking.send(new com.wildfire.client.screens.ScreenPacket(bytes)),()->ClientPlayNetworking.canSend(com.wildfire.client.screens.ScreenPacket.TYPE));
+            ClientPlayNetworking.registerReceiver(com.wildfire.client.screens.ScreenPacket.TYPE,(packet,context)->context.client().execute(()->com.wildfire.client.screens.ScreenClient.accept(packet.data())));
             com.wildfire.client.music.CardBalanceClient.configure(nonce->{
                 if(!ClientPlayNetworking.canSend(com.wildfire.client.music.CardBalancePackets.Request.TYPE))throw new IllegalStateException("Unavailable");
                 ClientPlayNetworking.send(new com.wildfire.client.music.CardBalancePackets.Request(nonce));
@@ -126,6 +141,7 @@ public final class ServerAppearanceSync {
             ClientPlayNetworking.registerReceiver(MusicPackets.NowPlaying.TYPE, (packet, context) ->
                 context.client().schedule(() -> MusicClient.accept(packet)));
             ClientPlayNetworking.registerReceiver(AppearancePackets.Hello.TYPE, (packet, context) -> {
+                com.wildfire.client.vr.VivecraftObserver.reset();
                 // SkinSystem lives on the proxy and uses its own texture protocol.
                 // A legacy lobby may advertise appearance protocol 2/7, but it must
                 // still receive skin/cape readiness and must not trigger a mod update.
@@ -189,6 +205,7 @@ public final class ServerAppearanceSync {
             active = false;
             client.execute(() -> {
             com.wildfire.client.towns.TownsClient.reset();
+            com.wildfire.client.screens.ScreenClient.reset();
             com.wildfire.gui.ChatAvatars.clear();
             com.wildfire.client.overhead.OverheadCameraTextures.clear();
             com.wildfire.client.overhead.CameraClient.reset();

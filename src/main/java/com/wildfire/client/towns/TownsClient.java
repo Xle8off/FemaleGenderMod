@@ -62,6 +62,7 @@ public final class TownsClient {
         }catch(Exception e){error="Не удалось отправить действие Towns";return false;}
     }
     public static void accept(byte[] bytes){
+        if(bytes.length>0&&bytes[0]==127){try{TerritoryPresence.accept(bytes);}catch(IOException ignored){}return;}
         try{
             snapshot=parse(bytes);receivedAt=clock.getAsLong();
             requestProtocol=Math.max(2,snapshot.protocol());
@@ -111,7 +112,7 @@ public final class TownsClient {
     private static String text(DataInputStream in,int max)throws IOException{
         String value=in.readUTF();if(value.length()>max||value.indexOf('§')>=0||value.codePoints().anyMatch(Character::isISOControl))throw new IOException("Text");return value;
     }
-    public static void reset(){snapshot=null;requestedAt=receivedAt=announcedAt=waitingSince=0;requestProtocol=4;error="";}
+    public static void reset(){TerritoryPresence.reset();snapshot=null;requestedAt=receivedAt=announcedAt=waitingSince=0;requestProtocol=4;error="";}
     public static List<City> pendingCities(Snapshot data){
         if(data==null)return List.of();
         var byId=new HashMap<String,City>();data.cities().forEach(c->byId.put(c.id(),c));

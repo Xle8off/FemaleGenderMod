@@ -11,6 +11,7 @@ public final class CampaignClient {
     private static BiConsumer<String,String> notifier=(title,text)->{};
     private static List<Poll> polls=List.of(),history=List.of();
     private static final Set<String> notified=new LinkedHashSet<>();
+    private static final Set<String> resultNotified=new LinkedHashSet<>();
     private static long sent,received,offset,pendingAt;
     private static boolean admin,failed;
     private static String feedback="";
@@ -64,6 +65,7 @@ public final class CampaignClient {
     public static void accept(JsonObject state){
         try {
             var next=parse(state.getAsJsonArray("polls"));var previous=parse(state.getAsJsonArray("history"));
+            var results=parse(state.has("results")?state.getAsJsonArray("results"):new JsonArray());
             boolean allowed=state.get("admin").getAsBoolean();long serverTime=state.get("serverTime").getAsLong();
             String reply=state.has("feedback")?state.get("feedback").getAsString():"";
             String requestId=state.has("requestId")?state.get("requestId").getAsString():"";
@@ -82,8 +84,15 @@ public final class CampaignClient {
             for(var poll:active())if(notified.add(poll.id())){
                 notifier.accept("Голосование: "+poll.title(),"Откройте вкладку «Голосования» в меню. "+(poll.multiple()?"Можно выбрать несколько вариантов.":"Выберите один вариант."));
             }
+            for(var poll:results)if(resultNotified.add(poll.id()))notifier.accept("Итоги: "+poll.title(),resultSummary(poll));
             while(notified.size()>128)notified.remove(notified.iterator().next());
+            while(resultNotified.size()>128)resultNotified.remove(resultNotified.iterator().next());
         }catch(RuntimeException invalid){/* A malformed snapshot never grants admin permissions. */}
+    }
+    private static String resultSummary(Poll poll){
+        int best=poll.counts().stream().mapToInt(Integer::intValue).max().orElse(0);var winners=new ArrayList<String>();
+        for(int i=0;i<poll.options().size()&&i<poll.counts().size();i++)if(poll.counts().get(i)==best)winners.add(poll.options().get(i));
+        return "Победило: "+String.join(", ",winners)+" (голосов: "+best+"). Всего участников: "+poll.totalVoters()+".";
     }
     private static List<Poll> parse(JsonArray array){
         if(array==null||array.size()>30)throw new IllegalArgumentException();

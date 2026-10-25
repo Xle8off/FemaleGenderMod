@@ -16,6 +16,7 @@ public final class ApiNoticeInbox {
         try {
             var data=JsonParser.parseString(json).getAsJsonObject();
             if(data.has("type")&&data.get("type").getAsString().equals("state")){CampaignClient.accept(data);return;}
+            if(data.has("type")&&data.get("type").getAsString().startsWith("stream")){StreamNoticeClient.receive(data);return;}
             if(json.length()>4096)return;
             String id=UUID.fromString(data.get("id").getAsString()).toString();
             String title=data.get("title").getAsString(),text=data.get("text").getAsString();

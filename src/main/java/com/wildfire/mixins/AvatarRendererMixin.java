@@ -49,6 +49,7 @@ abstract class AvatarRendererMixin extends LivingEntityRenderer<Avatar, AvatarRe
     @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;F)V", at = @At("TAIL"))
     private void wildfiregender$hdSkin(Avatar avatar, AvatarRenderState state, float partialTick, CallbackInfo ci) {
         state.skin = HdSkinClient.skin(avatar.getUUID(), state.skin);
+        com.wildfire.client.vr.VrPoseClient.bind(avatar.getUUID(),state);
     }
 
     @ModifyReturnValue(method = "shouldShowName(Lnet/minecraft/world/entity/Avatar;D)Z", at = @At("RETURN"))

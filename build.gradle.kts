@@ -24,7 +24,7 @@ repositories {
 dependencies {
     // Preserve the shared moderation integration already maintained in this repository.
     if (sc.current.version == "26.2") {
-        include(implementation("dev.aeltorx.inflow:client:1.0.48")!!)
+        include(implementation("dev.aeltorx.inflow:client:1.0.49")!!)
         implementation("net.fabricmc.fabric-api:fabric-api:0.156.0+26.2")
     }
     // Lazy-loaded only from the camera setup window; no browser or automatic capture.

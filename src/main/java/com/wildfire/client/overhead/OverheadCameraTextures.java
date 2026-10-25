@@ -34,7 +34,7 @@ public final class OverheadCameraTextures {
         Map<UUID,UUID> result=new HashMap<>();
         var player=Minecraft.getInstance().player;
         // Self-view uses local capture, never a receiving SFU subscription (even in F5).
-        for(var entry:wanted.entrySet())if(player!=null&&!entry.getKey().equals(player.getUUID())&&receiving(entry.getKey(),entry.getValue().session))result.put(entry.getKey(),entry.getValue().session);
+        for(var entry:CameraSubscriptions.snapshot(wanted))if(player!=null&&!entry.getKey().equals(player.getUUID())&&receiving(entry.getKey(),entry.getValue().session))result.put(entry.getKey(),entry.getValue().session);
         return Map.copyOf(result);
     }
     private static boolean receiving(UUID owner,UUID session){

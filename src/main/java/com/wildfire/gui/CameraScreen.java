@@ -20,6 +20,7 @@ public final class CameraScreen extends Screen {
     private List<NativeCameraPreview.Device> shown=List.of();
     private final List<Button> fields=new ArrayList<>();
     private Button enable,close;
+    private Button viewers;
     private DynamicTexture texture;
     private final Identifier textureId=Identifier.fromNamespaceAndPath("appearance_sync","camera_preview");
     private int imageWidth,imageHeight;
@@ -61,6 +62,7 @@ public final class CameraScreen extends Screen {
             }));
         }
         close=button("Отмена",left+16,top+h-34,(w-36)/2,this::onClose);
+        viewers=button("Зрители камеры",left+16,top+8,110,()->minecraft.gui.setScreen(new CameraViewersScreen(this)));
         enable=button("Включить камеру",left+20+(w-36)/2,top+h-34,(w-36)/2,()->{
             if(CameraClient.capture()==preview){CameraClient.stop();onClose();}
             else CameraClient.publish(preview);
@@ -71,6 +73,7 @@ public final class CameraScreen extends Screen {
     private List<String> resolutions(){return modes().stream().map(CameraOptions.Mode::resolution).distinct().toList();}
     private List<Integer> rates(){return mode==null?List.of():modes().stream().filter(m->m.width()==mode.width()&&m.height()==mode.height()).map(CameraOptions.Mode::fps).distinct().sorted(Comparator.reverseOrder()).toList();}
     private void update(){
+        if(viewers!=null)viewers.active=CameraClient.capture()==preview;
         boolean running=CameraClient.capture()==preview;
         fields.get(0).setMessage(Component.literal(device<0?"Выбрать камеру":preview.devices().get(device).name()));
         fields.get(1).setMessage(Component.literal(mode==null?"Нет доступных режимов":mode.resolution()));
@@ -145,6 +148,7 @@ public final class CameraScreen extends Screen {
         int infoY=top+Math.min(187,h-66);
         for(var line:font.split(Component.literal(status),Math.max(20,(w-44)/2))) {if(infoY>top+h-61)break;g.text(font,line,left+17,infoY,UiTheme.MUTED,false);infoY+=11;}
         String hint=CameraClient.available()?"До 480p · 30 FPS · 800 Кбит/с":"Координатор камер недоступен";
+        if(viewers!=null)viewers.setMessage(Component.literal("Зрители: "+CameraClient.subscriberCount()));
         g.text(font,font.plainSubstrByWidth(hint,w-32),left+16,top+h-51,UiTheme.MUTED,false);
         super.extractRenderState(g,mx,my,delta);
         if(dropdown>=0){

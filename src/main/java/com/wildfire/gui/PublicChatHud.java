@@ -50,7 +50,7 @@ public final class PublicChatHud {
             float opacity=animation.opacity()*leaving.opacity();
             String body=row.text().getString();int marker=body.indexOf("[Стикер:");
             var sticker=marker>=0?WebStickers.message(body.substring(marker).trim()):null;
-            var image=java.util.regex.Pattern.compile("https://skin\\.springplus\\.net/api/chat-images/([a-f0-9]{64})\\.png").matcher(body);
+            var image=PublicChatState.IMAGE_PATTERN.matcher(body);
             if(sticker!=null||marker>=0&&WebStickers.isMessage(body.substring(marker).trim())){
                 y-=74;if(y+74<top)break;
 g.text(font,PublicChatState.prefix(row.text(),marker).getVisualOrderText(),rowX,y,ChatMotion.color(UiTheme.TEXT,opacity),false);
@@ -61,7 +61,7 @@ else g.text(font,WebStickers.missingLabel(),rowX,y+24,ChatMotion.color(UiTheme.M
 g.text(font,PublicChatState.prefix(row.text(),image.start()).getVisualOrderText(),rowX,y,ChatMotion.color(UiTheme.TEXT,opacity),false);
 ChatImages.draw(g,image.group(1),rowX,y+12,60,opacity);
             }else{
-                var lines=font.split(PublicChatState.formatted(row.text()),width-16);
+                var lines=PublicChatState.lines(row,font,width-16);
                 int height=Math.max(1,lines.size())*12;y-=height+2;if(y+height<top)break;
 for(int line=0;line<lines.size();line++)g.text(font,lines.get(line),rowX,y+line*12,ChatMotion.color(UiTheme.TEXT,opacity),false);
             }

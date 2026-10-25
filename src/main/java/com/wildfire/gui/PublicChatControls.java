@@ -307,7 +307,7 @@ public final class PublicChatControls {
             float opacity=animation.opacity()*leaving.opacity();
             String body=row.text().getString();int marker=body.indexOf("[Стикер:");
             var sticker=marker>=0?WebStickers.message(body.substring(marker).trim()):null;
-            var imageMatch=java.util.regex.Pattern.compile("https://skin\\.springplus\\.net/api/chat-images/([a-f0-9]{64})\\.png").matcher(body);
+            var imageMatch=PublicChatState.IMAGE_PATTERN.matcher(body);
             if(sticker!=null||marker>=0&&WebStickers.isMessage(body.substring(marker).trim())){
                 y-=74;if(y+74<historyTop())break;
 g.text(f,PublicChatState.prefix(row.text(),marker).getVisualOrderText(),rowX,y,ChatMotion.color(UiTheme.TEXT,opacity),false);
@@ -323,7 +323,7 @@ g.text(f,PublicChatState.prefix(row.text(),imageMatch.start()).getVisualOrderTex
 ChatImages.draw(g,id,rowX,y+12,60,opacity);int imageY=y+12;
                 if(imageY>=historyTop()&&imageY+60<=bottom)hits.add(new Hit(rowX,imageY,60,60,()->ChatImages.view(screen,id)));
             }else{
-                var lines=f.split(PublicChatState.formatted(row.text()),w-16);int height=Math.max(1,lines.size())*12;y-=height+2;if(y+height<historyTop())break;
+                var lines=PublicChatState.lines(row,f,w-16);int height=Math.max(1,lines.size())*12;y-=height+2;if(y+height<historyTop())break;
                 var text=g.textRenderer(GuiGraphicsExtractor.HoveredTextEffects.TOOLTIP_AND_CURSOR,style->hovered=style);
                 for(var line:lines){
                     textHits.add(new TextHit(rowX,y,line));

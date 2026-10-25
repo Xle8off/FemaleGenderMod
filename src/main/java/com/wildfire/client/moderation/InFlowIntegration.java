@@ -21,6 +21,7 @@ public final class InFlowIntegration {
     private InFlowIntegration() {}
     public static void register() {
         if (!REGISTERED.compareAndSet(false, true)) return;
+        dev.aeltorx.inflow.client.ModerationPeople.install((g,name,x,y,size)->{var face=com.wildfire.gui.ChatAvatars.texture(name);if(face!=null)com.wildfire.gui.ChatAvatars.drawTexture(g,face,x,y,size);});
         ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
             if (!(screen instanceof NotificationCenterScreen)) return;
             var panel = new Shortcut(screen, false);

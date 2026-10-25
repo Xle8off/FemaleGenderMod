@@ -1,0 +1,19 @@
+allprojects { p ->
+ afterEvaluate {
+  if(p.path in [':26.2',':26.3',':neoforge:26.2',':neoforge:26.3']) {
+   def output=p.layout.buildDirectory.dir('chat-cache-check')
+   def compile=p.tasks.register('compileChatCacheCheck',JavaCompile) {
+    dependsOn p.tasks.named('classes')
+    source=p.rootProject.files('tests/ChatCacheCheck.java')
+    classpath=p.sourceSets.main.runtimeClasspath
+    destinationDirectory=output
+    options.release=25
+   }
+   p.tasks.register('checkChatCache',JavaExec) {
+    dependsOn compile
+    classpath=p.sourceSets.main.runtimeClasspath+p.files(output)
+    mainClass='ChatCacheCheck'
+   }
+  }
+ }
+}
