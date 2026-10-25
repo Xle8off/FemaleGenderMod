@@ -1,0 +1,36 @@
+// Pure checks; no game, browser, server or external network is started.
+allprojects { p ->
+ p.plugins.withId('java') {
+  if(p.name in ['26.2','26.3']){
+   def root=p.rootDir
+   def javaRoot=new File(root,'src/main/java')
+   if(!javaRoot.isDirectory())javaRoot=new File(root,'common/src/main/java')
+   p.tasks.register('compileScreenCheck',JavaCompile){
+    source p.fileTree(new File(javaRoot,'net/springplus/screens')){include '*.java'}
+    source new File(javaRoot,'com/wildfire/client/screens/ScreenClient.java')
+    source new File(javaRoot,'com/wildfire/client/screens/ScreenSurface.java'),new File(javaRoot,'com/wildfire/client/screens/BrowserEngine.java')
+    source new File(root,'tests/BrowserCheck.java')
+    source new File(root,'tests/ScreenProtocolTest.java'),new File(root,'tests/ScreenClientCheck.java')
+    classpath=p.files()
+    destinationDirectory=p.layout.buildDirectory.dir('screen-check')
+    options.encoding='UTF-8'
+    javaCompiler=p.javaToolchains.compilerFor{languageVersion=JavaLanguageVersion.of(25)}
+   }
+   p.tasks.register('checkScreenProtocol',JavaExec){
+    dependsOn 'compileScreenCheck'
+    classpath=p.files(p.layout.buildDirectory.dir('screen-check'))
+    mainClass='net.springplus.screens.ScreenProtocolTest'
+   }
+   p.tasks.register('checkScreenClient',JavaExec){
+    dependsOn 'compileScreenCheck'
+    classpath=p.files(p.layout.buildDirectory.dir('screen-check'))
+    mainClass='com.wildfire.client.screens.ScreenClientCheck'
+   }
+   p.tasks.register('checkBrowser',JavaExec){
+    dependsOn 'compileScreenCheck'
+    classpath=p.files(p.layout.buildDirectory.dir('screen-check'))
+    mainClass='com.wildfire.client.screens.BrowserCheck'
+   }
+  }
+ }
+}

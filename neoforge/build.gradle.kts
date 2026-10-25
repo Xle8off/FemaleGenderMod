@@ -4,9 +4,27 @@ plugins {
     id("me.modmuss50.mod-publish-plugin")
 }
 
+val webrtcNatives by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
 dependencies {
+    implementation("dev.onvoid.webrtc:webrtc-java:0.19.0") { isTransitive = false }
+    jarJar("dev.onvoid.webrtc:webrtc-java:0.19.0") { isTransitive = false }
+    for (platform in listOf("windows-x86_64", "windows-aarch64", "linux-x86_64", "linux-aarch64", "linux-aarch32", "macos-x86_64", "macos-aarch64")) {
+        webrtcNatives("dev.onvoid.webrtc:webrtc-java:0.19.0:$platform") { isTransitive = false }
+    }
     implementation("javazoom:jlayer:1.0.1")
     jarJar("javazoom:jlayer:1.0.1")
+}
+tasks.processResources {
+    // Recovered common assets overlap generated locale files; prefer the loader's
+    // own/generated resources, which are visited first.
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(provider { webrtcNatives.files.map { zipTree(it) } }) {
+        include("*.dll", "*.so", "*.dylib", "META-INF/licenses/**")
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
 }
 
 sourceSets.main {

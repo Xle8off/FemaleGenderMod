@@ -1,5 +1,7 @@
 package com.wildfire.neoforge.client;
+import com.wildfire.gui.RoundedPanels;
 import com.wildfire.gui.UiTheme;
+import com.wildfire.neoforge.client.DiscVoiceVolume;
 
 import com.wildfire.client.config.CosmeticPreferences;
 import com.wildfire.neoforge.appearance.PrivateMessageInbox;
@@ -35,6 +37,7 @@ import java.util.Map;
 
 /** Compact drawer opened from the bell in chat. */
 public final class NotificationCenterScreen extends Screen implements com.wildfire.client.music.MenuPreviewSource {
+    private dev.aeltorx.inflow.client.NeoModerationButton moderationButton;
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault());
     private static final int[] ICON_COLORS = {UiTheme.ACCENT, UiTheme.ACCENT, UiTheme.ACCENT, UiTheme.ACCENT, UiTheme.ACCENT, 0xFF99BAFF};
     private final com.wildfire.gui.TownsPanel townsPanel = new com.wildfire.gui.TownsPanel();
@@ -167,7 +170,8 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
         return cachedStickerSelection;
     }
     private Button hurtSoundButton, cosmeticsButton, hudBellButton, hudTrackButton, notificationPopupsButton;
-    private Button campaignAdminButton,campaignVoteButton;
+    private Button overheadModeButton,overheadMessagesButton,overheadCamerasButton;
+    private Button campaignAdminButton,campaignVoteButton,playerAssetsButton,screenMenuButton;
     private Button hudPlayerButton;
     private Button vanillaChatButton;
     private int settingsCategory;
@@ -260,7 +264,9 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
             return handled;
         }
     }
-    private Button listeningButton, ownListeningButton, shareListeningButton;
+    private Button listeningButton, ownListeningButton, shareListeningButton, discordPresenceButton;
+    private Button musicPriorityButton;
+    private Button screensEnabledButton;
     private String conversationPartner;
     private int conversationScroll;
     private int conversationSidebarScroll;
@@ -278,7 +284,7 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
         long now = System.currentTimeMillis();
         if (now - lastSkinCapture < 5_000L) return;
         lastSkinCapture = now;
-        // Local metadata only; no HTTP prefetch for all TAB players.
+        // Capture local metadata only. Never fetch skins for the whole TAB from the HUD.
         com.wildfire.neoforge.appearance.GenderedNotifications.capture();
     }
 
@@ -301,6 +307,8 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
         widgetX.clear(); tabs.clear(); rowActions.clear(); messageActions.clear();
         openedAt = System.currentTimeMillis();
         drawerWidth = Math.min(340, width);
+        cameraButton=addRenderableWidget(new com.wildfire.gui.CameraButton(this,2,height-35));
+        moderationButton=addRenderableWidget(new dev.aeltorx.inflow.client.NeoModerationButton(this));
         int content = contentLeft();
         int available = contentWidth();
         ItemStack[] icons = {
@@ -308,7 +316,7 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
             new ItemStack(Items.WRITABLE_BOOK), new ItemStack(Items.COMPARATOR), new ItemStack(Items.MUSIC_DISC_13), new ItemStack(Items.BRICKS)
         };
         String[] hints = {"Уведомления", "Друзья", "Личные сообщения", "Настройки", "Музыка", "Города"};
-        int sidebarPitch=Math.min(21,Math.max(18,(height-88)/8));
+        int sidebarPitch=Math.min(21,Math.max(16,(height-88)/9));
         for (int i = 0; i < icons.length; i++) {
             IconTabButton button = new IconTabButton(i, icons[i], 2, 40 + i * sidebarPitch, 18, 18);
             button.setTooltip(Tooltip.create(Component.literal(hints[i])));
@@ -323,10 +331,19 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
         addRenderableWidget(popupOnlyButton);
         campaignAdminButton=addRenderableWidget(new com.wildfire.gui.CampaignTabButton(this,true,2,40+6*sidebarPitch));
         campaignVoteButton=addRenderableWidget(new com.wildfire.gui.CampaignTabButton(this,false,2,40+7*sidebarPitch));
+        screenMenuButton=addRenderableWidget(new com.wildfire.gui.ScreenMenuButton(this,2,40+8*sidebarPitch));
         notificationPopupsButton=com.wildfire.gui.SettingsControls.toggle("Всплывающие уведомления",0,
             CosmeticPreferences::notificationPopups,b->{CosmeticPreferences.toggleNotificationPopups();updateWidgets();})
             .bounds(content,172,available,22).build();
         addRenderableWidget(notificationPopupsButton);
+        overheadModeButton=com.wildfire.gui.FlatButtons.builder(Component.literal("Режим над головой"),b->{
+            CosmeticPreferences.cycleOverheadMode();
+            if(CosmeticPreferences.overheadMode()!=com.wildfire.client.overhead.OverheadMedia.Mode.CAMERA&&com.wildfire.client.overhead.CameraClient.capture()!=null)com.wildfire.client.overhead.CameraClient.stop();
+            updateWidgets();
+        }).bounds(content,120,available,22).build();
+        overheadMessagesButton=com.wildfire.gui.SettingsControls.toggle("Сообщения над головой",0,CosmeticPreferences::overheadMessages,b->{CosmeticPreferences.toggleOverheadMessages();updateWidgets();}).bounds(content,144,available,22).build();
+        overheadCamerasButton=com.wildfire.gui.SettingsControls.toggle("Показывать чужие камеры",0,CosmeticPreferences::overheadCameras,b->{CosmeticPreferences.toggleOverheadCameras();updateWidgets();}).bounds(content,168,available,22).build();
+        addRenderableWidget(overheadModeButton);addRenderableWidget(overheadMessagesButton);addRenderableWidget(overheadCamerasButton);
         hurtSoundButton = com.wildfire.gui.SettingsControls.toggle("Звук урона мода", 1, CosmeticPreferences::modHurtSound, button -> {
             CosmeticPreferences.toggleHurtSound(); updateWidgets();
         }).bounds(content, 88, available, 22).build();
@@ -361,9 +378,12 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
             }).bounds(content + index * (categoryWidth + 2), 66, categoryWidth, 22).build();
             settingsCategories.add(categoryButton); addRenderableWidget(categoryButton);
         }
+        screensEnabledButton=addRenderableWidget(com.wildfire.gui.FlatButtons.builder(Component.literal("Экраны"),b->{com.wildfire.client.screens.ScreenQuality.toggleEnabled();if(!com.wildfire.client.screens.ScreenQuality.enabled())com.wildfire.client.screens.BrowserRuntime.stop();updateWidgets();}).bounds(content,284,available,22).build());
+        musicPriorityButton=addRenderableWidget(com.wildfire.gui.FlatButtons.builder(Component.literal("Приоритет музыки"),b->{com.wildfire.client.music.AudioPreferences.togglePriority();updateWidgets();}).bounds(content,284,available,22).build());
         listeningButton = addRenderableWidget(com.wildfire.gui.SettingsControls.toggle("Музыка над игроками", 2, CosmeticPreferences::musicLabels, b -> { CosmeticPreferences.toggleMusicLabels(); updateWidgets(); }).bounds(content, 200, available, 22).build());
         ownListeningButton = addRenderableWidget(com.wildfire.gui.SettingsControls.toggle("Своя музыка в F5", 2, CosmeticPreferences::ownMusicLabel, b -> { CosmeticPreferences.toggleOwnMusicLabel(); updateWidgets(); }).bounds(content, 228, available, 22).build());
         shareListeningButton = addRenderableWidget(com.wildfire.gui.SettingsControls.toggle("Делиться треком", 2, CosmeticPreferences::shareListening, b -> { CosmeticPreferences.toggleShareListening(); updateWidgets(); }).bounds(content, 256, available, 22).build());
+        discordPresenceButton = addRenderableWidget(com.wildfire.gui.SettingsControls.category("Discord Rich Presence",0,b->minecraft.gui.setScreen(new com.wildfire.gui.DiscordPresenceScreen(this))).bounds(content,98,available,22).build());
         friendSearch = new EditBox(font, content, 64, available, 18, Component.literal("Поиск друзей"));
         friendSearch.setHint(Component.literal("Поиск по нику"));
         friendSearch.setMaxLength(16);
@@ -404,7 +424,7 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
         }).bounds(content, 42, 75, 20).build();
         addRenderableWidget(backToChats);
         manageGroup = com.wildfire.gui.FlatButtons.builder(Component.literal("⋮"), button -> minecraft.gui.setScreen(
-            new GroupEditorScreen(this,groupId(),groupFriends(),this::openGroupConversation)))
+            new com.wildfire.neoforge.client.GroupEditorScreen(this,groupId(),groupFriends(),this::openGroupConversation)))
             .bounds(content + available - 21,42,20,20).build();
         manageGroup.setTooltip(Tooltip.create(Component.literal("Участники и настройки группы"))); addRenderableWidget(manageGroup);
         backToNotifications = com.wildfire.gui.FlatButtons.builder(Component.literal("← Назад"), button -> {
@@ -534,6 +554,7 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
     }
 
     private void openConversation(String partner) {
+        receiptReveal.clear();
         reactionPicker = false;
         boolean group = com.wildfire.client.music.GroupInbox.isGroup(partner);
         if (group ? com.wildfire.client.music.GroupInbox.group(com.wildfire.client.music.GroupInbox.id(partner)) == null : !partner.matches("[A-Za-z0-9_]{1,16}")) return;
@@ -655,7 +676,7 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
     }
     private void slideWidgets() {
         int offset = slideOffset();
-        widgetX.forEach((widget, x) -> widget.setX(x + offset + (tabs.contains(widget) ? sidebarTransitionOffset() : 0)));
+        widgetX.forEach((widget, x) -> widget.setX(x + offset + (tabs.contains(widget)||widget==campaignAdminButton||widget==campaignVoteButton||widget==playerAssetsButton||widget==screenMenuButton ? sidebarTransitionOffset() : 0)));
     }
 
     private int sidebarTransitionOffset() {
@@ -663,7 +684,9 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
         return (int) Math.round(-23 * (1.0 - t) * (1.0 - t));
     }
 
+    private com.wildfire.gui.CameraButton cameraButton;
     private void updateWidgets() {
+        if(cameraButton!=null){cameraButton.visible=tab!=2;cameraButton.active=cameraButton.visible;}
         if(messageInput!=null){
             int lines=Math.max(1,font.split(Component.literal(messageInput.getValue()),Math.max(1,messageInput.getWidth()-16)).size());
             int inputHeight=Math.min(Math.max(20,lines*9+12),Math.max(20,Math.min(66,height/4)));
@@ -686,6 +709,17 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
         for (var button : tabs) button.visible = tab != 2;
         if(campaignAdminButton!=null)campaignAdminButton.visible=tab!=2&&closingAt==0&&com.wildfire.client.music.CampaignClient.admin();
         if(campaignVoteButton!=null)campaignVoteButton.visible=tab!=2&&closingAt==0&&!com.wildfire.client.music.CampaignClient.active().isEmpty();
+        if(playerAssetsButton!=null)playerAssetsButton.visible=false;
+        if(screenMenuButton!=null){screenMenuButton.visible=tab!=2&&closingAt==0&&!com.wildfire.client.screens.ScreenInteraction.nearby().isEmpty();screenMenuButton.active=screenMenuButton.visible;}
+        var navigation=new ArrayList<AbstractWidget>(tabs);
+        if(campaignAdminButton!=null)navigation.add(campaignAdminButton);
+        if(campaignVoteButton!=null)navigation.add(campaignVoteButton);
+        if(playerAssetsButton!=null)navigation.add(playerAssetsButton);
+        if(screenMenuButton!=null)navigation.add(screenMenuButton);
+        int visibleNavigation=(int)navigation.stream().filter(button->button.visible).count();
+        int navigationPitch=Math.min(21,Math.max(18,(height-75)/Math.max(1,visibleNavigation)));
+        int navigationSlot=0;
+        for(var button:navigation)if(button.visible)button.setY(40+navigationSlot++*navigationPitch);
         int count = tab == 1 ? friendRows().size() : tab == 2 ? PrivateMessageInbox.conversations().size()
             : NotificationInbox.entries().size();
         int perPage = tab == 1 ? friendPageSize() : notificationPageSize();
@@ -777,13 +811,13 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
                 (CosmeticPreferences.hudTrack() ? "показывать" : "скрыть")));
         }
         if (hudPlayerButton != null) {
-            Button[][] groups = {{notificationPopupsButton, popupOnlyButton, hudBellButton, vanillaChatButton}, {cosmeticsButton, hurtSoundButton},
-                {hudPlayerButton, hudTrackButton, listeningButton, ownListeningButton, shareListeningButton}};
+            Button[][] groups = {{notificationPopupsButton, popupOnlyButton, hudBellButton, vanillaChatButton, discordPresenceButton}, {cosmeticsButton, hurtSoundButton,overheadModeButton,overheadMessagesButton,overheadCamerasButton,screensEnabledButton},
+                {hudPlayerButton, hudTrackButton, listeningButton, ownListeningButton, shareListeningButton,musicPriorityButton}};
             for (int group = 0; group < groups.length; group++)
                 for (int row = 0; row < groups[group].length; row++) {
                     Button button = groups[group][row];
                     button.visible = tab == 3 && group == settingsCategory;
-                    int pitch = Math.clamp((height - 150) / 5, 15, 28);
+                    int pitch = Math.clamp((height - 150) / groups[group].length, 15, 28);
                     button.setY(98 + row * pitch); button.setHeight(Math.min(22, pitch - 2));
                 }
             for (int group = 0; group < settingsCategories.size(); group++) {
@@ -791,6 +825,9 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
                 button.visible = tab == 3; button.active = group != settingsCategory;
             }
             hudPlayerButton.setMessage(Component.literal("Плеер вне меню: " + (CosmeticPreferences.hudPlayer() ? "показывать" : "скрыть")));
+            musicPriorityButton.setMessage(Component.literal("Приоритет: "+(com.wildfire.client.music.AudioPreferences.clientPriority()?"своя музыка":"пластинки")));
+            screensEnabledButton.setMessage(Component.literal("Игровые экраны: "+(com.wildfire.client.screens.ScreenQuality.enabled()?"включены":"выключены")));
+            overheadModeButton.setMessage(Component.literal("Над головой: "+switch(CosmeticPreferences.overheadMode()){case MESSAGES->"сообщения";case CAMERA->"камера · ожидание";case OFF->"выключено";}));
         }
         for (int i = 0; i < rowActions.size(); i++) {
             var friends = friendRows();
@@ -844,6 +881,7 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
     }
 
     @Override public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+        if(moderationButton!=null){moderationButton.setX(slideOffset()+2);moderationButton.visible=moderationButton.active=closingAt==0&&dev.aeltorx.inflow.client.InFlowApi.allowed();}
         if (tab == 5 && closingAt == 0) townsPanel.tick();
         updateWidgets();
         if (tab == 2 && System.currentTimeMillis() - lastContactsRefresh > 15_000L) {
@@ -956,7 +994,7 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
         if (tab == 3) return;
         if (tab == 5) { townsPanel.render(graphics,left,46,available,height-48,mouseX,mouseY); return; }
         if (tab == 2 && conversationPartner != null) {
-            renderConversation(graphics, left, available);
+            renderConversation(graphics, left, available,mouseX,mouseY);
             return;
         }
         if (tab == 2) {
@@ -1005,6 +1043,7 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
                 int statusColor = "in_game".equals(entry.status()) ? 0xFF36CF79
                     : "friend".equals(entry.kind()) ? 0xFF929AA6 : 0xFFFFC46A;
                 statusDot(graphics, left + 20, y + 20, statusColor);
+                com.wildfire.gui.ModPresence.draw(graphics,entry.name(),left+3,y+15,mouseX,mouseY);
                 graphics.text(font, font.plainSubstrByWidth(identity(entry.role(), entry.name()), Math.max(12, available - 85)),
                     left + 29, y + 3, 0xFFE8EDF3, false);
                 String detail = switch (entry.kind()) {
@@ -1023,6 +1062,7 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
                     PrivateMessageInbox.statusColor(conversation.partner()));
                 graphics.text(font, font.plainSubstrByWidth(conversation.partner(), available - 68),
                     left + 29, y + 1, 0xFFE8EDF3, false);
+                com.wildfire.gui.ModPresence.draw(graphics,conversation.partner(),left+3,y+15,mouseX,mouseY);
                 String detail = (conversation.role().isBlank() ? "" : conversation.role() + " · ")
                     + PrivateMessageInbox.presence(conversation.partner())
                     + (conversation.unread() > 0 ? " · ЛС: " + conversation.unread() : "");
@@ -1107,6 +1147,7 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
             if (conversation.unread() > 0) graphics.fill(x + 12, y, x + 18, y + 6, 0xFFE13251);
             if (mouseX >= x && mouseX < x+18 && mouseY >= y && mouseY < y+18) graphics.setTooltipForNextFrame(
                 Component.literal((conversation.group()?"Группа: ":"")+conversation.title()+(conversation.unread()>0?" · "+conversation.unread():"")),mouseX,mouseY);
+            if(!conversation.group())com.wildfire.gui.ModPresence.draw(graphics,conversation.partner(),x,y+9,mouseX,mouseY);
         }
     }
 
@@ -1274,12 +1315,13 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
     }
     private int inputExpansion(){return messageInput==null?0:Math.max(0,(int)Math.round(animatedInputHeight)-20);}
     private record MessageBubble(boolean outgoing, List<FormattedCharSequence> lines, String time, int width, int height,
-        com.wildfire.gui.ChatReactions.Reaction sticker, com.wildfire.gui.WebStickers.Sticker webSticker, String sender,String image) {}
-    private record ChatMessage(long receivedAt,boolean outgoing,String body,String sender) {}
+        com.wildfire.gui.ChatReactions.Reaction sticker, com.wildfire.gui.WebStickers.Sticker webSticker, String sender,String image,boolean read,String receiptKey) {}
+    private final com.wildfire.gui.MessageReceiptReveal receiptReveal=new com.wildfire.gui.MessageReceiptReveal();
+    private record ChatMessage(long receivedAt,boolean outgoing,String body,String sender,boolean read) {}
     private List<ChatMessage> chatMessages() {
         if (groupConversation()) return com.wildfire.client.music.GroupInbox.messages(groupId()).stream()
-            .map(m -> new ChatMessage(m.time(),com.wildfire.client.music.GroupInbox.outgoing(m),m.body(),m.name())).toList();
-        return PrivateMessageInbox.messages(conversationPartner).stream().map(m -> new ChatMessage(m.receivedAt(),m.outgoing(),m.body(),"")).toList();
+            .map(m -> new ChatMessage(m.time(),com.wildfire.client.music.GroupInbox.outgoing(m),m.body(),m.name(),com.wildfire.client.music.GroupInbox.readByAll(groupId(),m.id()))).toList();
+        return PrivateMessageInbox.messages(conversationPartner).stream().map(m -> new ChatMessage(m.receivedAt(),m.outgoing(),m.body(),"",PrivateMessageInbox.isRead(conversationPartner,m.receivedAt()))).toList();
     }
 
     private List<MessageBubble> conversationBubbles(int available) {
@@ -1295,14 +1337,29 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
             var lines = sticker == null && webSticker == null && image==null ? font.split(com.wildfire.gui.ChatLinks.text(displayBody), textWidth)
                 : List.<FormattedCharSequence>of();
             String time = TIME.format(Instant.ofEpochMilli(message.receivedAt()));
-            int usedWidth = Math.max(font.width(time),font.width(message.sender()));
+            int usedWidth = Math.max(font.width(time)+(message.outgoing()?14:0),font.width(message.sender()));
             for (var line : lines) usedWidth = Math.max(usedWidth, font.width(line));
             int bubbleWidth = Math.min(maxWidth, image!=null?160:webSticker != null ? 120 : sticker == null ? Math.max(40, usedWidth + 16) : 80);
             bubbles.add(new MessageBubble(message.outgoing(), lines, time, bubbleWidth,
                 (sticker == null && webSticker == null && image==null ? Math.max(1, lines.size()) * 11 + 22 : bubbleWidth + 12)
-                    + (message.sender().isEmpty()?0:11), sticker, webSticker, message.sender(),image));
+                    + (message.sender().isEmpty()?0:11), sticker, webSticker, message.sender(),image,message.read(),
+                    conversationPartner+":"+message.receivedAt()+":"+message.sender()+":"+message.body()));
         }
         return bubbles;
+    }
+
+    private void openContactProfile(){
+        attachmentDraft=messageInput==null?"":messageInput.getValue();
+        String partner=conversationPartner;
+        SocialClient.request();
+        minecraft.gui.setScreen(new com.wildfire.gui.ContactProfileScreen(this,partner,
+            ()->PrivateMessageInbox.presence(partner),
+            ()->{var row=SocialClient.rows().stream().filter(r->r.name().equalsIgnoreCase(partner)).findFirst().orElse(null);
+                return row==null?"Добавить в друзья":switch(row.kind()){case "friend"->"Уже в друзьях";case "incoming"->"Принять заявку";case "outgoing"->"Отменить заявку";default->"Добавить в друзья";};},
+            ()->!SocialClient.busy(partner)&&SocialClient.rows().stream().noneMatch(r->r.name().equalsIgnoreCase(partner)&&"friend".equals(r.kind())),
+            ()->{boolean outgoing=SocialClient.rows().stream().anyMatch(r->r.name().equalsIgnoreCase(partner)&&"outgoing".equals(r.kind()));SocialClient.action(outgoing?"cancel":"add",partner);},
+            dev.aeltorx.inflow.client.InFlowApi.allowed()?parent->dev.aeltorx.inflow.client.InFlowApi.openPlayer(parent,partner):null,
+            (g,x,y)->{var skin=partnerSkin(partner);if(skin!=null)com.wildfire.gui.ChatAvatars.drawTexture(g,skin,x,y,26);else g.item(new ItemStack(Items.PLAYER_HEAD),x+5,y+5);}));
     }
 
     private int conversationContentHeight(int available) {
@@ -1313,10 +1370,13 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
         return Math.max(1, height-70-inputExpansion()-8-74);
     }
 
-    private void renderConversation(GuiGraphicsExtractor graphics, int left, int available) {
+    private void renderConversation(GuiGraphicsExtractor graphics, int left, int available,int mouseX,int mouseY) {
         int panelLeft=slideOffset()+23,panelRight=slideOffset()+drawerWidth-2;
         graphics.fill(panelLeft,35,panelRight,71,UiTheme.CHROME);
         graphics.fill(panelLeft,71,panelRight,72,UiTheme.BORDER);
+        graphics.text(font,"›",panelRight-10,49,UiTheme.ACCENT,false);
+        if(!groupConversation()&&mouseX>=panelLeft&&mouseX<panelRight&&mouseY>=35&&mouseY<71)
+            graphics.setTooltipForNextFrame(Component.literal("Открыть профиль игрока"),mouseX,mouseY);
         var skin = groupConversation() ? null : partnerSkin(conversationPartner);
         String name = font.plainSubstrByWidth(conversationIdentity(), Math.max(1, available - 100));
         var group = com.wildfire.client.music.GroupInbox.group(groupId());
@@ -1328,6 +1388,7 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
         else if (skin != null) com.wildfire.gui.ChatAvatars.drawTexture(graphics, skin, groupX, 43, 22);
         else graphics.item(new ItemStack(Items.PLAYER_HEAD), groupX + 3, 46);
         graphics.text(font, name, groupX + 28, 43, UiTheme.TEXT, false);
+        if(!groupConversation())com.wildfire.gui.ModPresence.draw(graphics,conversationPartner,groupX,57,mouseX,mouseY);
         boolean online = !groupConversation() && PrivateMessageInbox.isOnline(conversationPartner);
         if (!groupConversation()) statusDot(graphics, groupX + 20, 63,
             PrivateMessageInbox.statusColor(conversationPartner));
@@ -1364,8 +1425,10 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
                         graphics.text(font, line, x + 8, lineY, 0xFFE8EDF3, false);
                         lineY += 11;
                     }
-                    graphics.text(font, bubble.time(), x + bubble.width() - font.width(bubble.time()) - 7,
+                    graphics.text(font, bubble.time(), x + bubble.width() - font.width(bubble.time()) - 7-(bubble.outgoing()?14:0),
                         y + bubble.height() - 12, 0xFFB3BDC8, false);
+                    if(bubble.outgoing())drawReceipt(graphics,x+bubble.width()-18,y+bubble.height()-10,
+                        receiptReveal.update(bubble.receiptKey(),bubble.read(),System.nanoTime()));
                 }
                 y += bubble.height() + 6;
             }
@@ -1380,11 +1443,28 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
             .filter(row -> row.partner().equalsIgnoreCase(conversationPartner)).map(row -> row.role()).findFirst().orElse("");
         return identity(role, conversationPartner);
     }
+    private static void drawReceipt(GuiGraphicsExtractor g,int x,int y,double progress){
+        int from=UiTheme.MUTED,to=UiTheme.ACCENT,color=0xFF000000;
+        for(int shift=0;shift<=16;shift+=8){
+            int a=(from>>>shift)&255,b=(to>>>shift)&255;
+            color|=((int)Math.round(a+(b-a)*progress))<<shift;
+        }
+        int offset=(int)Math.round(3*(1-progress));
+        // One compact ligature: the second mark adds only its rising stroke,
+        // rather than drawing two separate complete check symbols.
+        g.fill(x+offset,y+2,x+offset+1,y+3,color);
+        g.fill(x+offset+1,y+3,x+offset+2,y+4,color);
+        for(int step=0;step<5;step++)g.fill(x+offset+2+step,y+4-step,x+offset+3+step,y+5-step,color);
+        int length=(int)Math.round(5*progress);
+        int secondColor=((int)Math.round(255*progress)<<24)|(color&0xFFFFFF);
+        for(int step=0;step<length;step++)g.fill(x+6+step,y+4-step,x+7+step,y+5-step,secondColor);
+    }
 
     private static String identity(String role, String name) {
         return role == null || role.isBlank() ? name : role + " " + name;
     }
 
+    /** Compact now-playing card in chat; the drawer is not required. */
     public static void renderChatPlayer(GuiGraphicsExtractor graphics, int screenWidth) {
         if (!MusicClient.active()) return;
         int panelWidth = Math.min(244, screenWidth - 16);
@@ -1429,6 +1509,17 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
     }
     private long musicControlPressedUntil;
     private boolean compactPlayer(){return !MusicClient.active()&&!MusicClient.personalActive();}
+    private boolean draggingScreenVolume;
+    private int screenAudioY(){return compactPlayer()?74:143;}
+    private boolean screenAudioVisible(){return com.wildfire.client.screens.ScreenAudio.inRange()&&com.wildfire.client.screens.BrowserRuntime.running();}
+    private boolean onScreenVolume(double mx,double my){
+        int x=Math.max(drawerWidth+8,width-258),w=width-x-8;x+=playerSlideOffset(w);
+        return screenAudioVisible()&&w>=140&&closingAt==0&&mx>=x+10&&mx<=x+w-10&&my>=screenAudioY()+14&&my<=screenAudioY()+31;
+    }
+    private void updateScreenVolume(double mx){
+        int x=Math.max(drawerWidth+8,width-258),w=width-x-8;x+=playerSlideOffset(w);
+        com.wildfire.client.screens.BrowserRuntime.volume((float)Math.clamp((mx-x-12)/Math.max(1,w-24d),0,1));
+    }
     private int playerVolumeY(){return compactPlayer()?46:89;}
     private void renderPlayer(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         int x = Math.max(drawerWidth + 8, width - 258);
@@ -1436,6 +1527,26 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
         if (panelWidth < 140) return;
         x += playerSlideOffset(panelWidth);
         // Match the accent's outer contour: no square background pixels beneath its cut corners.
+        if(screenAudioVisible()){
+            int y=screenAudioY();
+            RoundedPanels.fill(graphics,x,y,x+panelWidth,y+53,0xEC171B25);
+            graphics.text(font,font.plainSubstrByWidth("Экран · "+com.wildfire.client.screens.ScreenAudio.site(),panelWidth-24),x+12,y+5,0xFFB9C2CC,false);
+            float level=com.wildfire.client.screens.BrowserRuntime.volume();
+            int thumb=x+12+Math.round((panelWidth-24)*level);
+            graphics.fill(x+12,y+21,x+panelWidth-12,y+24,0xFF343A43);
+            graphics.fill(x+12,y+21,thumb,y+24,UiTheme.ACCENT);
+            graphics.fill(thumb-2,y+18,thumb+2,y+27,UiTheme.ACCENT);
+            String notice=com.wildfire.client.music.MusicPriority.notice();
+            String text=notice.isEmpty()?"Громкость экрана: "+Math.round(level*100)+"%":notice;
+            graphics.text(font,font.plainSubstrByWidth(text,panelWidth-24),x+12,y+36,0xFFB9A5D8,false);
+            if(mouseX>=x&&mouseX<x+panelWidth&&mouseY>=y+32&&mouseY<y+53)
+                graphics.setTooltipForNextFrame(Component.literal(text),mouseX,mouseY);
+        }else if(!com.wildfire.client.music.MusicPriority.notice().isEmpty()){
+            String notice=com.wildfire.client.music.MusicPriority.notice();
+            graphics.text(font,font.plainSubstrByWidth(notice,panelWidth-12),x+6,screenAudioY()+4,0xFFB9A5D8,false);
+            if(mouseX>=x&&mouseX<x+panelWidth&&mouseY>=screenAudioY()&&mouseY<screenAudioY()+16)
+                graphics.setTooltipForNextFrame(Component.literal(notice),mouseX,mouseY);
+        }
         int bottom=compactPlayer()?66:135;
         RoundedPanels.fillLeft(graphics, x, 10, x + panelWidth - 1, bottom, 0xEC171B25, 6);
         graphics.fill(x + panelWidth - 1, 11, x + panelWidth, bottom-1, 0xEC171B25);
@@ -1633,6 +1744,12 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
     @Override public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
+        if(click.button()==0&&onScreenVolume(click.x(),click.y())){draggingScreenVolume=true;setDragging(true);updateScreenVolume(click.x());return true;}
+        if(closingAt==0&&tab==2&&conversationPartner!=null&&!groupConversation()&&!reactionPicker
+                &&click.button()==0&&click.y()>=35&&click.y()<71
+                &&click.x()>=slideOffset()+23&&click.x()<slideOffset()+drawerWidth-2){
+            openContactProfile();return true;
+        }
         if(tab==5&&closingAt==0&&townsPanel.click(click.x(),click.y(),click.button()))return true;
         if (heldSticker != null) return true;
         if(closingAt==0&&tab==2&&!reactionPicker&&conversationPartner!=null&&click.button()==0){
@@ -1713,7 +1830,7 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
             if (click.y() >= 40 && click.y() < 59) { setTab(tabBeforeChats); return true; }
             if (click.x() >= slideOffset()+2 && click.x() < slideOffset()+20 && click.y() >= 64 && click.y() < 82) {
                 if(com.wildfire.client.music.GroupInbox.supported()) minecraft.gui.setScreen(
-                    new GroupEditorScreen(this,"",groupFriends(),this::openGroupConversation));
+                    new com.wildfire.neoforge.client.GroupEditorScreen(this,"",groupFriends(),this::openGroupConversation));
                 return true;
             }
             int row = ((int) click.y() - 85) / 21;
@@ -1819,19 +1936,25 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
         return -1;
     }
     @Override public boolean mouseDragged(MouseButtonEvent click, double dragX, double dragY) {
+        if(draggingScreenVolume){updateScreenVolume(click.x());return true;}
         if (draggingMusicSeek) { previewMusicSeek(click.x()); return true; }
         if (draggingRecordVolume) { updateRecordVolume(click.x()); return true; }
         return super.mouseDragged(click, dragX, dragY);
     }
     @Override public boolean mouseReleased(MouseButtonEvent click) {
+        if(draggingScreenVolume){draggingScreenVolume=false;setDragging(false);com.wildfire.client.music.AudioPreferences.save();return true;}
         if (heldSticker != null && click.button() == 0) {
             Button button = heldStickerButton;
+            var clickedSticker=button==null&&!stickerPreviewShown&&System.nanoTime()-stickerPressedAt<1_000_000_000L
+                &&closingAt==0&&tab==2&&!reactionPicker?conversationStickerAt(click.x(),click.y()):null;
+            boolean openPack=clickedSticker!=null&&clickedSticker.id().equals(heldSticker.id());
             boolean send = !stickerPreviewShown && System.nanoTime() - stickerPressedAt < 1_000_000_000L
                 && closingAt == 0 && tab == 2 && reactionPicker && stickerPicker
                 && button != null && button.isMouseOver(click.x(), click.y());
             returnStickerPreview();
             heldSticker = null; heldStickerButton = null; stickerPreviewShown = false;
             if (send) button.onPress(click);
+            else if(openPack){attachmentDraft=messageInput==null?"":messageInput.getValue();minecraft.gui.setScreen(new com.wildfire.gui.StickerShopScreen(this,clickedSticker));}
             return true;
         }
         if (draggingMusicSeek && click.button() == 0) {

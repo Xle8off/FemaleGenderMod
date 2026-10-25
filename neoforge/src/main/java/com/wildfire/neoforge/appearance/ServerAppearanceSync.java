@@ -27,7 +27,7 @@ public final class ServerAppearanceSync {
 
     public static boolean submit(UUID token, float breastSize, BreastShape shape, Cosmetics original, Cosmetics cosmetics) {
         if (!isActive() || !Float.isFinite(breastSize) || breastSize < 0f || breastSize > 0.8f) return false;
-        ClientPacketDistributor.sendToServer(new AppearancePackets.CustomizationResult(token, breastSize, shape.id(),
+        OptionalPayloadSender.sendToServer(new AppearancePackets.CustomizationResult(token, breastSize, shape.id(),
             cosmetics.shirt(), cosmetics.pants(), cosmetics.headwear(), cosmetics.pet()));
         return true;
     }

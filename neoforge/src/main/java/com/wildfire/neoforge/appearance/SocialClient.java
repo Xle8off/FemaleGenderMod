@@ -29,18 +29,19 @@ public final class SocialClient {
     public static void request() {
         if (System.currentTimeMillis() - requestedAt < 10_000L) return;
         requestedAt = System.currentTimeMillis();
-        ClientPacketDistributor.sendToServer(new SocialPackets.Request((byte) 1));
+        OptionalPayloadSender.sendToServer(new SocialPackets.Request((byte) 1));
     }
     public static void action(String action, String target) {
         if (!target.matches("[A-Za-z0-9_]{1,16}") || busy(target)) return;
         actionTarget = target;
         actionUntil = System.currentTimeMillis() + 6000;
-        ClientPacketDistributor.sendToServer(new SocialPackets.Action(action, target));
+        OptionalPayloadSender.sendToServer(new SocialPackets.Action(action, target));
         ModUpdate.transientFeedback("Отправляем действие: " + target, -1f, 3);
     }
     public static void accept(String json) {
         try {
             var object = JsonParser.parseString(json).getAsJsonObject();
+            com.wildfire.gui.ModPresence.accept(object);
             expires=object.has("expires")&&!object.get("expires").isJsonNull()?object.get("expires").getAsLong():-1;
             roleName = object.has("roleName") && !object.get("roleName").isJsonNull()
                 ? object.get("roleName").getAsString() : "";

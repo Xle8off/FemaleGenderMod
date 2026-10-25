@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "dev.aeltorx.inflow.client.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "DisplayAccess",
+    "BlockDisplayAccess",
+    "TextDisplayAccess",
+    "MannequinAccess",
+    "ModerationHudMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -8,4 +8,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface ContainerPositionAccessor {
     @Accessor("leftPos")
     int springplus$getLeftPos();
+    @Accessor("topPos")
+    int springplus$getTopPos();
 }

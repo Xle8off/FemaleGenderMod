@@ -8,6 +8,10 @@
         "SyncVerbosityMixin"
     ],
     "client": [
+        "VrPoseModelMixin",
+        "VrPoseArmorMixin",
+        "ServerPlayerInfoSkinMixin",
+        "ServerPlayerSkinMixin",
         "ChatScreenFocusAccessor",
         "MenuSleeveRenderMixin",
         "PublicChatSuggestionsMixin",

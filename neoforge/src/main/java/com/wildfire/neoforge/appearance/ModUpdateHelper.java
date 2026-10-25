@@ -22,7 +22,12 @@ public final class ModUpdateHelper {
         if (lines.size() != 2 || !lines.get(0).matches("SpringPlusCosmetics-neoforge-[0-9]+\\.[0-9]+\\.[0-9]+-beta\\.[0-9]+\\+mc26\\.2\\.jar")
             || !lines.get(1).matches("[a-f0-9]{64}")) return;
         Path target = current.resolveSibling(lines.get(0));
-        String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(staged)));
+        var hasher = MessageDigest.getInstance("SHA-256");
+        try (var input = Files.newInputStream(staged)) {
+            byte[] buffer = new byte[32 * 1024];
+            for (int count; (count = input.read(buffer)) != -1;) hasher.update(buffer, 0, count);
+        }
+        String digest = HexFormat.of().formatHex(hasher.digest());
         if (!digest.equals(lines.get(1))) return;
         Path backup = current.resolveSibling(current.getFileName() + ".previous");
         boolean installed = false;

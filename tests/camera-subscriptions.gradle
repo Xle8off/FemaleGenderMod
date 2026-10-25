@@ -1,0 +1,19 @@
+allprojects { p ->
+ afterEvaluate {
+  if(p.path in [':26.2',':26.3',':neoforge:26.2',':neoforge:26.3']) {
+   def output=p.layout.buildDirectory.dir('camera-subscriptions-check')
+   def compile=p.tasks.register('compileCameraSubscriptionsCheck',JavaCompile) {
+    dependsOn p.tasks.named('classes')
+    source=p.rootProject.files('tests/CameraSubscriptionsCheck.java')
+    classpath=p.sourceSets.main.runtimeClasspath
+    destinationDirectory=output
+    options.release=25
+   }
+   p.tasks.register('checkCameraSubscriptions',JavaExec) {
+    dependsOn compile
+    classpath=p.sourceSets.main.runtimeClasspath+p.files(output)
+    mainClass='com.wildfire.client.overhead.CameraSubscriptionsCheck'
+   }
+  }
+ }
+}

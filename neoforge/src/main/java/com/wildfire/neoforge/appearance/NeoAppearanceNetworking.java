@@ -15,13 +15,14 @@ public final class NeoAppearanceNetworking {
 
     /** Repeat readiness after Velocity backend switches, without requiring a new login. */
     public static void tickSkinReady() {
+        if(!net.neoforged.fml.ModList.get().isLoaded("vivecraft"))com.wildfire.client.vr.VivecraftObserver.tick();
         var client = Minecraft.getInstance();
         if (client.player == null || client.level == null || ModUpdate.isDeclined()) return;
         com.wildfire.client.towns.TownsClient.announce();
         long now = System.nanoTime();
         if (now - lastSkinReady < 5_000_000_000L) return;
         lastSkinReady = now;
-        ClientPacketDistributor.sendToServer(new AppearancePackets.SkinReady((byte) 1));
+        OptionalPayloadSender.sendToServer(new AppearancePackets.SkinReady((byte) 1));
     }
 
     public static void resetSkinReady() { lastSkinReady = 0; }
@@ -31,10 +32,27 @@ public final class NeoAppearanceNetworking {
     }
 
     private static void registerPackets(RegisterPayloadHandlersEvent event) {
+        event.registrar("springplus").optional().playToServer(RouteProbePacket.TYPE, RouteProbePacket.CODEC, (packet, context) -> {});
         PayloadRegistrar packets = event.registrar("appearance_sync").optional();
+        packets.playBidirectional(com.wildfire.client.screens.ScreenPacket.TYPE,com.wildfire.client.screens.ScreenPacket.CODEC,(packet,context)->{},(packet,context)->context.enqueueWork(()->com.wildfire.client.screens.ScreenClient.accept(packet.data())));
+        com.wildfire.client.screens.ScreenClient.configure(bytes->OptionalPayloadSender.sendToServer(new com.wildfire.client.screens.ScreenPacket(bytes)),()->Minecraft.getInstance().getConnection()!=null&&Minecraft.getInstance().getConnection().hasChannel(com.wildfire.client.screens.ScreenPacket.TYPE));
+        com.wildfire.client.vr.VrPoseClient.configure(()->net.neoforged.fml.ModList.get().isLoaded("vivecraft"));
+        if(!net.neoforged.fml.ModList.get().isLoaded("vivecraft")){
+            event.registrar("springplus_vivecraft_observer").optional().playBidirectional(com.wildfire.client.vr.VrPosePacket.TYPE,com.wildfire.client.vr.VrPosePacket.CODEC,
+                (packet,context)->{},
+                (packet,context)->context.enqueueWork(()->com.wildfire.client.vr.VivecraftObserver.accept(packet.data())));
+            com.wildfire.client.vr.VivecraftObserver.configure(bytes->OptionalPayloadSender.sendToServer(new com.wildfire.client.vr.VrPosePacket(bytes)),
+                ()->Minecraft.getInstance().getConnection()!=null&&Minecraft.getInstance().getConnection().hasChannel(com.wildfire.client.vr.VrPosePacket.TYPE));
+        }
+        packets.playBidirectional(com.wildfire.client.overhead.CameraPacket.TYPE,com.wildfire.client.overhead.CameraPacket.CODEC,
+            (packet,context)->{},
+            (packet,context)->context.enqueueWork(()->com.wildfire.client.overhead.CameraClient.accept(packet.json())));
+        com.wildfire.client.overhead.CameraClient.configure(value->OptionalPayloadSender.sendToServer(new com.wildfire.client.overhead.CameraPacket(value)),
+            ()->Minecraft.getInstance().getConnection()!=null&&Minecraft.getInstance().getConnection().hasChannel(com.wildfire.client.overhead.CameraPacket.TYPE));
         packets.playBidirectional(com.wildfire.client.towns.TownsPacket.TYPE,com.wildfire.client.towns.TownsPacket.CODEC,
+            (packet,context)->{},
             (packet,context)->context.enqueueWork(()->com.wildfire.client.towns.TownsClient.accept(packet.data())));
-        com.wildfire.client.towns.TownsClient.configure(bytes->ClientPacketDistributor.sendToServer(new com.wildfire.client.towns.TownsPacket(bytes)),
+        com.wildfire.client.towns.TownsClient.configure(bytes->OptionalPayloadSender.sendToServer(new com.wildfire.client.towns.TownsPacket(bytes)),
             ()->Minecraft.getInstance().getConnection()!=null&&Minecraft.getInstance().getConnection().hasChannel(com.wildfire.client.towns.TownsPacket.TYPE));
         com.wildfire.gui.TownsScreen.setMessageOpener((parent,name)->Minecraft.getInstance().gui.setScreen(new com.wildfire.neoforge.client.NotificationCenterScreen(parent,name)));
         com.wildfire.gui.TownsScreen.setFriendAdder(name->SocialClient.action("add",name));
@@ -42,8 +60,10 @@ public final class NeoAppearanceNetworking {
         com.wildfire.client.towns.TownsClient.setOpenHandler(()->{var client=Minecraft.getInstance();if(!(client.gui.screen() instanceof com.wildfire.gui.TownsScreen))client.gui.setScreen(new com.wildfire.gui.TownsScreen(client.gui.screen()));});
         com.wildfire.client.towns.TownsClient.configureImageTicket(PrivateMessageInbox::requestImageTicket);
         packets.playBidirectional(MenuPacket.TYPE, MenuPacket.CODEC,
+            (packet,context)->{},
             (packet, context) -> context.enqueueWork(() -> com.wildfire.client.music.MenuPresence.accept(packet.json())));
         packets.playBidirectional(ListeningPacket.TYPE, ListeningPacket.CODEC,
+            (packet,context)->{},
             (packet, context) -> context.enqueueWork(() -> com.wildfire.client.music.ListeningState.accept(packet.json())));
         packets.playToClient(ChatStatePacket.TYPE, ChatStatePacket.CODEC,
             (packet, context) -> context.enqueueWork(() -> com.wildfire.gui.PublicChatState.acceptControl(packet.state())));
@@ -64,7 +84,7 @@ public final class NeoAppearanceNetworking {
             }));
         packets.playToServer(SocialPackets.Request.TYPE, SocialPackets.Request.CODEC, (packet, context) -> {});
         packets.playToServer(com.wildfire.client.music.CardBalancePackets.Request.TYPE,com.wildfire.client.music.CardBalancePackets.Request.CODEC,(packet,context)->{});
-        com.wildfire.client.music.CardBalanceClient.configure(nonce->ClientPacketDistributor.sendToServer(new com.wildfire.client.music.CardBalancePackets.Request(nonce)));
+        com.wildfire.client.music.CardBalanceClient.configure(nonce->OptionalPayloadSender.sendToServer(new com.wildfire.client.music.CardBalancePackets.Request(nonce)));
         packets.playToClient(com.wildfire.client.music.CardBalancePackets.Snapshot.TYPE,com.wildfire.client.music.CardBalancePackets.Snapshot.CODEC,
             (packet,context)->context.enqueueWork(()->com.wildfire.client.music.CardBalanceClient.accept(packet.json())));
         packets.playToServer(SocialPackets.Action.TYPE, SocialPackets.Action.CODEC, (packet, context) -> {});
@@ -72,21 +92,22 @@ public final class NeoAppearanceNetworking {
         packets.playToServer(com.wildfire.client.music.GroupPackets.Request.TYPE, com.wildfire.client.music.GroupPackets.Request.CODEC, (packet, context) -> {});
         packets.playToServer(AppearancePackets.NotificationPreference.TYPE, AppearancePackets.NotificationPreference.CODEC, (packet, context) -> {});
         packets.playToClient(AppearancePackets.NotificationProbe.TYPE, AppearancePackets.NotificationProbe.CODEC, (packet, context) -> {
-            if (packet.value() == 1) ClientPacketDistributor.sendToServer(new AppearancePackets.NotificationAck((byte) 1));
+            if (packet.value() == 1) OptionalPayloadSender.sendToServer(new AppearancePackets.NotificationAck((byte) 1));
         });
         packets.playToServer(AppearancePackets.NotificationAck.TYPE, AppearancePackets.NotificationAck.CODEC, (packet, context) -> {});
         packets.playToServer(com.wildfire.client.music.ApiNoticePackets.Ack.TYPE,com.wildfire.client.music.ApiNoticePackets.Ack.CODEC,(packet,context)->{});
         packets.playToServer(com.wildfire.client.music.CampaignControlPacket.TYPE,com.wildfire.client.music.CampaignControlPacket.CODEC,(packet,context)->{});
-        com.wildfire.client.music.CampaignClient.configure(value->ClientPacketDistributor.sendToServer(new com.wildfire.client.music.CampaignControlPacket(value)),()->true);
-        com.wildfire.client.music.ApiNoticeInbox.configure(value->ClientPacketDistributor.sendToServer(new com.wildfire.client.music.ApiNoticePackets.Ack(value)),
+        com.wildfire.client.music.CampaignClient.configure(value->OptionalPayloadSender.sendToServer(new com.wildfire.client.music.CampaignControlPacket(value)),()->true);
+        com.wildfire.client.music.ApiNoticeInbox.configure(value->OptionalPayloadSender.sendToServer(new com.wildfire.client.music.ApiNoticePackets.Ack(value)),
             (title,text)->{NotificationInbox.add("Система",title,text);ModUpdate.notificationFeedback("Система",title,text);});
+        com.wildfire.client.music.ApiNoticeInbox.stream(StreamNoticeClient::receive);
         packets.playToClient(com.wildfire.client.music.ApiNoticePackets.Notice.TYPE,com.wildfire.client.music.ApiNoticePackets.Notice.CODEC,
             (packet,context)->context.enqueueWork(()->com.wildfire.client.music.ApiNoticeInbox.receive(packet.json())));
         packets.playToClient(SocialPackets.Snapshot.TYPE, SocialPackets.Snapshot.CODEC,
             (packet, context) -> context.enqueueWork(() -> SocialClient.accept(packet.json())));
         packets.playToClient(MessagePackets.Snapshot.TYPE, MessagePackets.Snapshot.CODEC,
             (packet, context) -> context.enqueueWork(() -> PrivateMessageInbox.accept(packet.json())));
-        com.wildfire.client.music.GroupInbox.configure(json -> ClientPacketDistributor.sendToServer(new com.wildfire.client.music.GroupPackets.Request(json)),
+        com.wildfire.client.music.GroupInbox.configure(json -> OptionalPayloadSender.sendToServer(new com.wildfire.client.music.GroupPackets.Request(json)),
             () -> net.minecraft.client.Minecraft.getInstance().player == null ? "" : net.minecraft.client.Minecraft.getInstance().player.getUUID().toString(),
             (title, message) -> ModUpdate.notificationFeedback("Группа", title, message));
         packets.playToClient(com.wildfire.client.music.GroupPackets.Snapshot.TYPE, com.wildfire.client.music.GroupPackets.Snapshot.CODEC,
@@ -94,9 +115,10 @@ public final class NeoAppearanceNetworking {
         packets.playToClient(MusicPackets.NowPlaying.TYPE, MusicPackets.NowPlaying.CODEC,
             (packet, context) -> context.enqueueWork(() -> MusicClient.accept(packet)));
         packets.playToClient(AppearancePackets.Hello.TYPE, AppearancePackets.Hello.CODEC, (packet, context) -> {
+            context.enqueueWork(com.wildfire.client.vr.VivecraftObserver::reset);
             // SkinSystem is a proxy service: a legacy lobby appearance protocol
             // must not suppress skin/cape transfers or prompt a false mod update.
-            ClientPacketDistributor.sendToServer(new AppearancePackets.SkinReady((byte) 1));
+            OptionalPayloadSender.sendToServer(new AppearancePackets.SkinReady((byte) 1));
             if (packet.version() > 0 && packet.version() < 10) {
                 AppearanceState.deactivate();
                 AppearanceState.resetProfiles();
@@ -106,7 +128,7 @@ public final class NeoAppearanceNetworking {
             ModUpdate.check(packet.version(), () -> {
                 AppearanceState.activate();
                 AppearanceState.resetProfiles();
-                ClientPacketDistributor.sendToServer(new AppearancePackets.HelloAck(packet.version()));
+                OptionalPayloadSender.sendToServer(new AppearancePackets.HelloAck(packet.version()));
             }, () -> {
                 AppearanceState.deactivate();
                 AppearanceState.resetProfiles();
@@ -116,7 +138,7 @@ public final class NeoAppearanceNetworking {
                 CosmeticCatalogClient.reset();
                 RelationshipClient.clear();
                 ChibiSkinClient.clear();
-                ClientPacketDistributor.sendToServer(new AppearancePackets.Disable((byte) 1));
+                OptionalPayloadSender.sendToServer(new AppearancePackets.Disable((byte) 1));
             });
         });
         packets.playToClient(AppearancePackets.Snapshot.TYPE, AppearancePackets.Snapshot.CODEC, (packet, context) -> {

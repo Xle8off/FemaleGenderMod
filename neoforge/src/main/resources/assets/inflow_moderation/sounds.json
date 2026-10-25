@@ -1,0 +1,4 @@
+{
+  "ui.click": { "sounds": ["inflow_moderation:click"] },
+  "ui.open": { "sounds": ["inflow_moderation:open"] }
+}

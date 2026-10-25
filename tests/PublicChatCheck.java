@@ -1,6 +1,16 @@
 import com.wildfire.gui.ChatChannelMetadata;
 public final class PublicChatCheck {
     public static void main(String[] args){
+        var receipts=new com.wildfire.gui.MessageReceiptReveal();
+        if(receipts.update("old",true,1_000_000_000L)!=1)throw new AssertionError("Existing read message does not replay animation");
+        if(receipts.update("live",false,1_000_000_000L)!=0)throw new AssertionError("Unread shows one check");
+        if(receipts.update("live",true,2_000_000_000L)!=0)throw new AssertionError("Read transition starts continuously");
+        double receiptMiddle=receipts.update("live",true,2_110_000_000L);
+        if(receiptMiddle<=0||receiptMiddle>=1)throw new AssertionError("Read check animates");
+        if(receipts.update("live",true,2_220_000_000L)!=1)throw new AssertionError("Animation settles");
+        if(receipts.update("live",false,3_000_000_000L)!=1)throw new AssertionError("Late unread state cannot replay transition");
+        receipts.clear();
+        if(receipts.update("live",true,4_000_000_000L)!=1)throw new AssertionError("Reopened chat shows final read state");
         var toastReveal=new com.wildfire.gui.ToastControlsReveal();
         if(com.wildfire.gui.ToastControlsReveal.height(true,0)!=43||
            com.wildfire.gui.ToastControlsReveal.height(true,1)!=68||
@@ -66,6 +76,14 @@ public final class PublicChatCheck {
             if(new com.wildfire.gui.ChatAllFilters(file).vanillaChat())throw new AssertionError("Chat view toggle persisted");
             java.nio.file.Files.deleteIfExists(file);java.nio.file.Files.deleteIfExists(directory);
         }catch(Exception error){throw new AssertionError("Chat view preferences",error);}
+        var newest=com.wildfire.gui.ChatScrollBounds.thumb(100,300,0);
+        if(com.wildfire.gui.ChatScrollBounds.wheel(0,300,1)!=14||com.wildfire.gui.ChatScrollBounds.wheel(14,300,-1)!=0)throw new AssertionError("History wheel works independently of command input");
+        if(com.wildfire.gui.ChatScrollBounds.wheel(0,0,1)!=0||com.wildfire.gui.ChatScrollBounds.wheel(295,300,1)!=300)throw new AssertionError("Wheel bounds");
+        var oldest=com.wildfire.gui.ChatScrollBounds.thumb(100,300,300);
+        if(newest.top()!=75||newest.height()!=25||oldest.top()!=0)throw new AssertionError("Scrollbar endpoints");
+        if(com.wildfire.gui.ChatScrollBounds.scrollAt(0,100,300)!=300||com.wildfire.gui.ChatScrollBounds.scrollAt(75,100,300)!=0)throw new AssertionError("Scrollbar drag direction");
+        if(com.wildfire.gui.ChatScrollBounds.scrollAt(-200,100,300)!=300||com.wildfire.gui.ChatScrollBounds.scrollAt(500,100,300)!=0)throw new AssertionError("Scrollbar clamps");
+        if(com.wildfire.gui.ChatScrollBounds.thumb(100,0,0).height()!=100||com.wildfire.gui.ChatScrollBounds.scrollAt(5,100,0)!=0)throw new AssertionError("No-overflow scrollbar");
         if(com.wildfire.gui.ChatScrollBounds.maximum(new int[]{14,14,14},60)!=0)throw new AssertionError("No overflow");
         if(com.wildfire.gui.ChatScrollBounds.maximum(new int[]{14,14,14},42)!=0)throw new AssertionError("Exact fit");
         if(com.wildfire.gui.ChatScrollBounds.maximum(new int[]{14,14,14},30)!=12)throw new AssertionError("Partial overflow");

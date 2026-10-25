@@ -1,0 +1,39 @@
+// Opt-in pure Java checks: no real Discord connection or game server is contacted.
+allprojects { p ->
+    p.plugins.withId('java') {
+        if (p.name in ['26.2','26.3']) {
+            def repo = p.rootDir
+            def sources = p.fileTree(new File(repo,'src/main/java/com/wildfire/client/discord')) { include 'PresenceSettings.java','PresenceActivity.java','DiscordIpc.java' }
+            // NeoForge keeps common code in a sibling project.
+            if (!new File(repo,'src/main/java/com/wildfire/client/discord').isDirectory()) {
+                sources = p.fileTree(new File(repo,'common/src/main/java/com/wildfire/client/discord')) { include 'PresenceSettings.java','PresenceActivity.java','DiscordIpc.java' }
+            }
+            p.tasks.register('compileDiscordPresenceCheck', JavaCompile) {
+                source sources, new File(repo,'tests/DiscordPresenceCheck.java')
+                classpath = p.configurations.compileClasspath
+                destinationDirectory = p.layout.buildDirectory.dir('discord-check')
+                options.encoding = 'UTF-8'
+                javaCompiler = p.javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(25) }
+            }
+            p.tasks.register('checkDiscordPresence', JavaExec) {
+                dependsOn 'compileDiscordPresenceCheck'
+                classpath = p.files(p.layout.buildDirectory.dir('discord-check')) + p.configurations.compileClasspath
+                mainClass = 'com.wildfire.client.discord.DiscordPresenceCheck'
+            }
+            def territory = new File(repo,'src/main/java/com/wildfire/client/towns/TerritoryPresence.java')
+            if (!territory.isFile()) territory = new File(repo,'common/src/main/java/com/wildfire/client/towns/TerritoryPresence.java')
+            p.tasks.register('compileTerritoryPresenceCheck', JavaCompile) {
+                source territory, new File(repo,'tests/TerritoryPresenceCheck.java')
+                classpath = p.files()
+                destinationDirectory = p.layout.buildDirectory.dir('territory-check')
+                options.encoding = 'UTF-8'
+                javaCompiler = p.javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(25) }
+            }
+            p.tasks.register('checkTerritoryPresence', JavaExec) {
+                dependsOn 'compileTerritoryPresenceCheck'
+                classpath = p.files(p.layout.buildDirectory.dir('territory-check'))
+                mainClass = 'com.wildfire.client.towns.TerritoryPresenceCheck'
+            }
+        }
+    }
+}

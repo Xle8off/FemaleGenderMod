@@ -55,7 +55,8 @@ public final class HdSkinClient {
         return skin == null ? null : skin.id();
     }
 
-    /** Preserve the original cape, elytra, model and security flag. */
+    /** Server-provided skins are authoritative, including the absence of a server cape.
+     * Unmanaged players (and other servers after disconnect) retain their original providers. */
     public static PlayerSkin skin(UUID player, PlayerSkin original) {
         Identifier id = texture(player);
         if (original == null) return null;
@@ -63,8 +64,8 @@ public final class HdSkinClient {
             ? CapeClient.texture(player) : null;
         return id == null && cape == null ? original : new PlayerSkin(
             id == null ? original.body() : new ClientAsset.ResourceTexture(id, id),
-            cape == null ? original.cape() : cape,
-            cape == null ? original.elytra() : cape,
+            cape == null && id == null ? original.cape() : cape,
+            cape == null && id == null ? original.elytra() : cape,
             id == null ? original.model() : (SKINS.get(player).slim() ? PlayerModelType.SLIM : PlayerModelType.WIDE), original.secure());
     }
 

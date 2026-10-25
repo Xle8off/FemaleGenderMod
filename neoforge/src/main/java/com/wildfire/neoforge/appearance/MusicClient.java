@@ -35,6 +35,7 @@ public final class MusicClient {
                 ? Math.max(0, announcedDuration - remainingMillis) : 0);
         }
     }
+    private static boolean serverAudible(){return serverActive()&&!com.wildfire.client.music.MusicPriority.discsMuted();}
     public static boolean serverActive() {
         long elapsed = System.currentTimeMillis() - receivedAt;
         // The server refreshes playback roughly every eight seconds. Keep the HUD stable
@@ -43,16 +44,16 @@ public final class MusicClient {
     }
     public static boolean spotifyActive() {
         var web = com.wildfire.client.music.SpotifyWebPlayer.view();
-        return !serverActive() && web.running() && !web.title().isBlank();
+        return !serverAudible() && web.running() && !web.title().isBlank();
     }
     public static int accent() {
-        return serverActive() || !personalActive() ? 0xFFB681D4 : spotifyActive() ?
+        return serverAudible() || !personalActive() ? 0xFFB681D4 : spotifyActive() ?
             com.wildfire.client.music.SpotifyWebPlayer.website().accent : 0xFFFFCC33;
     }
     public static boolean paused() { return spotifyActive() ? !com.wildfire.client.music.SpotifyWebPlayer.view().playing() :
         personalActive() && !com.wildfire.client.music.PersonalMusicPlayer.view().playing(); }
     public static void control(int button) {
-        if (serverActive()) return;
+        if (serverAudible()) return;
         if (spotifyActive()) {
             if (button == 0) com.wildfire.client.music.SpotifyWebPlayer.previous();
             else if (button == 1) com.wildfire.client.music.SpotifyWebPlayer.toggle();
@@ -63,8 +64,8 @@ public final class MusicClient {
             else com.wildfire.client.music.PersonalMusicPlayer.next();
         }
     }
-    public static boolean personalActive() { return spotifyActive() || !serverActive() && com.wildfire.client.music.PersonalMusicPlayer.view().track() != null; }
-    public static boolean active() { return serverActive() || personalActive(); }
+    public static boolean personalActive() { return spotifyActive() || !serverAudible() && com.wildfire.client.music.PersonalMusicPlayer.view().track() != null; }
+    public static boolean active() { return serverAudible() || personalActive(); }
     public static boolean canSeek() { return personalActive() && progress() >= 0; }
     public static void seek(double ratio) {
         if (!canSeek() || !Double.isFinite(ratio)) return;
@@ -78,9 +79,9 @@ public final class MusicClient {
     public static String title() {
         if (spotifyActive()) return com.wildfire.client.music.SpotifyWebPlayer.view().title();
         var player = com.wildfire.client.music.PersonalMusicPlayer.view();
-        return serverActive() ? title : player.track() != null ? player.track().title() : "";
+        return serverAudible() ? title : player.track() != null ? player.track().title() : "";
     }
-    public static String position() { return spotifyActive() ? "Личный · " + com.wildfire.client.music.SpotifyWebPlayer.website().label : personalActive() ? "Личный · Яндекс" : serverActive() ? position : ""; }
+    public static String position() { return spotifyActive() ? "Личный · " + com.wildfire.client.music.SpotifyWebPlayer.website().label : personalActive() ? "Личный · Яндекс" : serverAudible() ? position : ""; }
     public static String timeLabel() {
         if (spotifyActive()) {
             var web = com.wildfire.client.music.SpotifyWebPlayer.view();

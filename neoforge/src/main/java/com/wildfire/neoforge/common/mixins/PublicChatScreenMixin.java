@@ -45,6 +45,7 @@ abstract class PublicChatScreenMixin extends Screen {
             return;
         }
         if(springplus$controls!=null&&springplus$controls.click(event.x(),event.y(),event.button())){
+            if(springplus$controls.historyDragging())setDragging(true);
             if(minecraft.gui.screen()==(Object)this)springplus$controls.focusComposer();
             ci.setReturnValue(true);
         }
@@ -52,7 +53,21 @@ abstract class PublicChatScreenMixin extends Screen {
     @Inject(method="extractRenderState",at=@At("TAIL"))
     private void springplus$frame(GuiGraphicsExtractor g,int mx,int my,float delta,CallbackInfo ci){if(springplus$controls!=null&&com.wildfire.client.music.SpringPlusSession.enabled())springplus$controls.renderFrame(g);}
     @Inject(method="mouseScrolled",at=@At("HEAD"),cancellable=true)
-    private void springplus$scroll(double x,double y,double sx,double sy,CallbackInfoReturnable<Boolean> ci){if(springplus$controls!=null&&springplus$controls.scroll(x,y,sy))ci.setReturnValue(true);}
+    private void springplus$scroll(double x,double y,double sx,double sy,CallbackInfoReturnable<Boolean> ci){
+        // Native suggestions consume the wheel only inside their actual rectangle.
+        if(springplus$controls!=null&&commandSuggestions.mouseScrolled(sy)){
+            ci.setReturnValue(true);return;
+        }
+        if(springplus$controls!=null&&springplus$controls.scroll(x,y,sy))ci.setReturnValue(true);
+    }
+    @Override public boolean mouseDragged(MouseButtonEvent event,double dx,double dy){
+        if(springplus$controls!=null&&springplus$controls.dragHistory(event.y(),event.button()))return true;
+        return super.mouseDragged(event,dx,dy);
+    }
+    @Override public boolean mouseReleased(MouseButtonEvent event){
+        if(springplus$controls!=null&&springplus$controls.releaseHistory(event.button())){setDragging(false);return true;}
+        return super.mouseReleased(event);
+    }
     @Inject(method="setInitialFocus",at=@At("RETURN"))
     private void springplus$focus(CallbackInfo ci){if(springplus$controls!=null)springplus$controls.focusComposer();}
     @Inject(method="keyPressed",at=@At("HEAD"),cancellable=true)

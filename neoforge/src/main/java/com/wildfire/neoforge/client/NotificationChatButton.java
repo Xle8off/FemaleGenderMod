@@ -33,6 +33,7 @@ public final class NotificationChatButton extends com.wildfire.client.music.Chat
         if (!(screen instanceof ChatScreen)) return;
         event.addListener(NotificationCenterScreen.hudPlayerWidget(screen));
         event.addListener(new NotificationChatButton(screen));
+        event.addListener(new StreamHudButton(screen));
         event.addListener(new com.wildfire.client.music.UpdateHudButton(ModUpdate::updateHudState, ModUpdate::activateUpdateHud));
         for (int slot = 0; slot < 3; slot++) {
             final int toastSlot=slot;
@@ -50,6 +51,8 @@ public final class NotificationChatButton extends com.wildfire.client.music.Chat
                 boolean bellVisible=!ModUpdate.popupVisible();
                 button.visible=bellVisible;
                 button.setY(14 + ModUpdate.topInset());
+            } else if (child instanceof StreamHudButton button) {
+                button.sync(14 + ModUpdate.topInset(), !ModUpdate.popupVisible());
             } else if (child instanceof com.wildfire.client.music.UpdateHudButton button) {
                 button.sync(38 + ModUpdate.topInset(),
                     com.wildfire.client.music.SpringPlusSession.enabled() && !ModUpdate.popupVisible());
@@ -58,14 +61,14 @@ public final class NotificationChatButton extends com.wildfire.client.music.Chat
             } else if (child instanceof PopupActionButton button) {
                 var action = ModUpdate.popupAction(button.slot);
                 button.displayedId = ModUpdate.popupId(button.slot);
-                boolean single = action != null && ("message".equals(action.kind()) || "friend_message".equals(action.kind()));
+                boolean single = action != null && ("message".equals(action.kind()) || "friend_message".equals(action.kind()) || "stream".equals(action.kind()));
                 button.visible = action != null && (button.primary || !single);
                 if (action != null) {
-                    button.setWidth(button.primary && "friend_message".equals(action.kind()) ? 160 : button.primary ? 100 : 106);
+                    button.setWidth(button.primary && ("friend_message".equals(action.kind())||"stream".equals(action.kind())) ? 160 : button.primary ? 100 : 106);
                     button.setX(button.primary ? single ? 10 + (212 - button.getWidth()) / 2 : 10 : 116);
                     button.setY(ModUpdate.popupActionY(button.slot));
                     button.setMessage(Component.literal(button.primary
-                        ? ("friend_message".equals(action.kind()) ? "Написать сообщение" : "notification".equals(action.kind()) ? "Посмотреть" : "message".equals(action.kind()) ? "Ответить" : "Принять")
+                        ? ("stream".equals(action.kind())?"Смотреть стрим":"friend_message".equals(action.kind()) ? "Написать сообщение" : "notification".equals(action.kind()) ? "Посмотреть" : "message".equals(action.kind()) ? "Ответить" : "Принять")
                         : ("notification".equals(action.kind()) ? "Закрыть" : "message".equals(action.kind()) ? "В друзья" : "Отклонить")));
                 }
             }
@@ -105,7 +108,8 @@ public final class NotificationChatButton extends com.wildfire.client.music.Chat
             if (action == null) return;
             if ("notification".equals(action.kind())) {
                 if(primary){var center=new NotificationCenterScreen(parent);center.openNotification(action.target());Minecraft.getInstance().gui.setScreen(center);}
-            } else if (primary && ("message".equals(action.kind()) || "friend_message".equals(action.kind())))
+            } else if(primary&&"stream".equals(action.kind()))net.minecraft.util.Util.getPlatform().openUri(action.target());
+            else if (primary && ("message".equals(action.kind()) || "friend_message".equals(action.kind())))
                 Minecraft.getInstance().gui.setScreen(new NotificationCenterScreen(parent, action.target()));
             else SocialClient.action("message".equals(action.kind()) ? "add" : primary ? "add" : "reject", action.target());
             ModUpdate.dismissPopup(displayedId);

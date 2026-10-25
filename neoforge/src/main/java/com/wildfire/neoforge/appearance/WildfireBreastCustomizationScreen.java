@@ -20,9 +20,9 @@ import java.util.UUID;
 
 /** Full-body, server-backed appearance editor. */
 public final class WildfireBreastCustomizationScreen extends BaseWildfireScreen {
-    private static final int WHITE = 0xFFE8EDF0;
-    private static final int MUTED = 0xFF9DA9B3;
-    private static final int STROKE = 0x88515D68;
+    private static final int WHITE = com.wildfire.gui.UiTheme.TEXT;
+    private static final int MUTED = com.wildfire.gui.UiTheme.MUTED;
+    private static final int STROKE = com.wildfire.gui.UiTheme.BORDER;
     private static final String[] SHIRTS = {"Нет", "Светлая", "Графит", "Слива"};
     private static final String[] PANTS = {"Нет", "Тёмные", "Серые", "Каштан"};
     private static final String[] HEADWEAR = {"Нет", "Кепка", "Нимб"};
@@ -49,6 +49,7 @@ public final class WildfireBreastCustomizationScreen extends BaseWildfireScreen 
     private WildfireButton previousPage, nextPage;
     private int cosmeticPage, petFilter;
     private java.util.List<Integer> visibleCosmetics = java.util.List.of();
+    private com.wildfire.gui.PlayerAssetsScreen assets;
 
     public WildfireBreastCustomizationScreen(@Nullable Screen parent, UUID playerUUID, UUID sessionToken,
                                              boolean female, boolean figureEditable, float initialSize, BreastShape initialShape, Cosmetics initialCosmetics) {
@@ -78,10 +79,12 @@ public final class WildfireBreastCustomizationScreen extends BaseWildfireScreen 
         int preview = Math.max(116, panelWidth() * 36 / 100);
         int controlsX = x + rail + preview + 14;
         int controlsW = x + panelWidth() - controlsX - 12;
+        if(assets==null)assets=new com.wildfire.gui.PlayerAssetsScreen(this,com.wildfire.neoforge.appearance.PrivateMessageInbox::requestAssetTicket);
+        assets.mount(controlsX,y+34,controlsW,panelHeight()-78,button->addRenderableWidget(button));
 
-        categories = female && figureEditable ? new int[]{0, 1, 3, 4} : new int[]{1, 3, 4};
+        categories = female && figureEditable ? new int[]{0, 1, 3, 4, 5} : new int[]{1, 3, 4, 5};
         categoryButtons = new WildfireButton[categories.length];
-        String[] labels = {"Фигура", "Одежда", "Лицо", "Головные", "Питомцы"};
+        String[] labels = {"Фигура", "Одежда", "Лицо", "Головные", "Питомцы", "Скин/плащ"};
         for (int i = 0; i < categories.length; i++) {
             final int target = categories[i];
             categoryButtons[i] = cleanButton(labels[target], x + 10, y + 45 + i * 26, rail - 20, 21,
@@ -122,10 +125,8 @@ public final class WildfireBreastCustomizationScreen extends BaseWildfireScreen 
                     if (index >= visibleCosmetics.size()) return;
                     int id = visibleCosmetics.get(index);
                     boolean selected = (category == 3 ? headwear : pet) == id;
-                    graphics.fill(button.getX(), button.getY(), button.getRight(), button.getBottom(),
-                        selected ? 0xDD3E6857 : button.isHoveredOrFocused() ? 0xDD38434C : 0xBB293139);
-                    graphics.fill(button.getX(), button.getBottom()-1, button.getRight(), button.getBottom(),
-                        selected ? 0xFF9ED9B1 : STROKE);
+                    com.wildfire.gui.FlatButtons.plate(graphics,button.getX(),button.getY(),button.getWidth(),button.getHeight(),
+                        true,selected||button.isHoveredOrFocused(),selected,com.wildfire.gui.UiTheme.ACCENT);
                     var entry = CosmeticCatalogClient.entry(id);
                     boolean relationship = entry != null && entry.kind().equals("pet_relationship");
                     var modelPreview = relationship ? null : CosmeticLayer.guiPreview(id, category == 3);
@@ -189,15 +190,15 @@ public final class WildfireBreastCustomizationScreen extends BaseWildfireScreen 
         return addButton(builder -> builder.message(() -> Component.literal(label))
             .position(x, y).size(w, h).onPress(_ -> action.run())
             .renderer((button, graphics, mouseX, mouseY, delta) -> {
-                graphics.fill(button.getX(), button.getY(), button.getRight(), button.getBottom(),
-                    !button.active ? 0xDD465A68 : button.isHoveredOrFocused() ? 0xDD38434C : 0xBB293139);
-                graphics.fill(button.getX(), button.getBottom() - 1, button.getRight(), button.getBottom(), STROKE);
+                com.wildfire.gui.FlatButtons.plate(graphics,button.getX(),button.getY(),button.getWidth(),button.getHeight(),
+                    button.active,button.isHoveredOrFocused(),false,com.wildfire.gui.UiTheme.ACCENT);
                 drawScrollingString(graphics, button.getMessage(), button.getX() + 3, button.getY(),
                     button.getRight() - 3, button.getBottom(), TextAlignment.CENTER, WHITE, false);
             }));
     }
 
     private void refreshControls() {
+        if(assets!=null)assets.visible(category==5);
         for (int i = 0; i < categoryButtons.length; i++) categoryButtons[i].active = categories[i] != category;
         sizeSlider.visible = female && category == 0;
         optionButtons[0].visible = female && category == 0;
@@ -225,6 +226,7 @@ public final class WildfireBreastCustomizationScreen extends BaseWildfireScreen 
         optionButtons[2].setMessage(Component.literal(primary));
         optionButtons[3].setMessage(Component.literal("Штаны: " + PANTS[pants]));
         saveButton.active = !lockedSelection();
+        saveButton.visible=category!=5;
         purchaseButton.visible = lockedSelection();
         if (gallery && purchaseButton.visible) {
             previousPage.visible = false;
@@ -334,6 +336,7 @@ public final class WildfireBreastCustomizationScreen extends BaseWildfireScreen 
 
     @Override
     public void removed() {
+        if(assets!=null)assets.removed();
         if (!submitted) {
             var player = getPlayer();
             if (player != null && female) player.breasts().bustSize().update(originalSize);
@@ -347,12 +350,16 @@ public final class WildfireBreastCustomizationScreen extends BaseWildfireScreen 
         extractTransparentBackground(graphics);
         int x = left(), y = top(), w = panelWidth(), h = panelHeight();
         int stageX = x + 78, preview = Math.max(116, w * 36 / 100);
-        graphics.fill(x, y, x + w, y + h, 0xDE111419);
-        graphics.fill(x, y, x + w, y + 1, STROKE);
-        graphics.fill(x, y + h - 1, x + w, y + h, STROKE);
-        graphics.fill(stageX, y + 34, stageX + preview, y + h - 42, 0xEC1B2026);
-        graphics.fill(stageX + preview + 7, y + 34, x + w - 7, y + h - 42, 0xEC1B2026);
-        if (minecraft.player != null) {
+        com.wildfire.gui.RoundedPanels.fill(graphics,x,y,x+w,y+h,com.wildfire.gui.UiTheme.BACKGROUND,6);
+        com.wildfire.gui.FlatButtons.joinedBackdrop(graphics,x+1,y+1,x+w-1,y+32,com.wildfire.gui.UiTheme.CHROME,5,true,false);
+        graphics.fill(x+1,y+32,x+w-1,y+33,STROKE);
+        com.wildfire.gui.FlatButtons.frame(graphics,x,y,x+w,y+h,com.wildfire.gui.UiTheme.ACCENT,6);
+        com.wildfire.gui.RoundedPanels.fill(graphics,stageX,y+36,stageX+preview,y+h-42,com.wildfire.gui.UiTheme.CHROME,4);
+        com.wildfire.gui.RoundedPanels.fill(graphics,stageX+preview+7,y+36,x+w-7,y+h-42,com.wildfire.gui.UiTheme.CHROME,4);
+        graphics.fill(stageX-5,y+40,stageX-4,y+h-46,STROKE);
+        if(assets!=null){
+            assets.renderEmbedded(graphics,stageX+5,y+39,preview-10,h-86,mouseX,mouseY,delta);
+        } else if (minecraft.player != null) {
             InventoryScreen.extractEntityInInventoryFollowsMouse(graphics,
                 stageX + 5, y + 39, stageX + preview - 5, y + h - 47,
                 Math.max(32, Math.min(74, (h - 90) * 2 / 5)),
@@ -368,9 +375,10 @@ public final class WildfireBreastCustomizationScreen extends BaseWildfireScreen 
         super.extractRenderState(graphics, mouseX, mouseY, delta);
         int x = left(), y = top();
         int controlsX = x + 78 + Math.max(116, panelWidth() * 36 / 100) + 14;
-        graphics.text(font, "КАСТОМИЗАЦИЯ", x + 12, y + 12, WHITE, false);
+        String title="Персонализация";
+        graphics.text(font,title,x+(panelWidth()-font.width(title))/2,y+12,WHITE,false);
         graphics.text(font, "ПЕРСОНАЖ", x + 87, y + 43, MUTED, false);
-        graphics.text(font, switch(category) { case 0 -> "ФИГУРА"; case 1 -> "ОДЕЖДА"; case 3 -> "ГОЛОВНЫЕ УБОРЫ"; default -> "ПИТОМЦЫ"; },
+        graphics.text(font, switch(category) { case 0 -> "ФИГУРА"; case 1 -> "ОДЕЖДА"; case 3 -> "ГОЛОВНЫЕ УБОРЫ";case 5->"СКИН И ПЛАЩ"; default -> "ПИТОМЦЫ"; },
             controlsX, y + 49, MUTED, false);
         if (category == 0) {
             int center = controlsX + (x + panelWidth() - controlsX - 12) / 2;
@@ -387,6 +395,18 @@ public final class WildfireBreastCustomizationScreen extends BaseWildfireScreen 
     }
 
     private int panelWidth() { return Math.min(width - 12, 500); }
+    @Override public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event,boolean doubleClick){
+        if(assets!=null&&assets.mouseClicked(event,doubleClick))return true;
+        return super.mouseClicked(event,doubleClick);
+    }
+    @Override public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event,double dx,double dy){
+        if(assets!=null&&assets.mouseDragged(event,dx,dy))return true;
+        return super.mouseDragged(event,dx,dy);
+    }
+    @Override public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event){
+        if(assets!=null&&assets.mouseReleased(event))return true;
+        return super.mouseReleased(event);
+    }
     private int panelHeight() { return Math.min(height - 12, 290); }
     private int left() { return (width - panelWidth()) / 2; }
     private int top() { return (height - panelHeight()) / 2; }

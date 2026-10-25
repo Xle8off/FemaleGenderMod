@@ -97,6 +97,8 @@ public class WildfireGenderClientNeo {
             return client.player != null && client.level != null && client.isMultiplayerServer() && AppearanceState.isActive();
         });
         NeoAppearanceNetworking.register(modEventBus);
+        dev.aeltorx.inflow.client.InFlowClient.register(modEventBus);
+        dev.aeltorx.inflow.client.ModerationPeople.install((g,name,x,y,size)->{var face=com.wildfire.gui.ChatAvatars.texture(name);if(face!=null)com.wildfire.gui.ChatAvatars.drawTexture(g,face,x,y,size);});
         WildfireGenderClient.tryMigrate();
         AppearanceState.setGarmentTextures(GarmentClient::texture);
         ClientConfig.INSTANCE.load(modContainer);
@@ -121,7 +123,11 @@ public class WildfireGenderClientNeo {
             }
         });
         NeoForge.EVENT_BUS.addListener(RegisterClientCommandsEvent.class, this::registerClientCommands);
-        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingIn.class, _ -> WildfireClientEventHandler.clientJoin(Minecraft.getInstance()));
+        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingIn.class, _ -> {
+            WildfireClientEventHandler.clientJoin(Minecraft.getInstance());
+            byte[] routeProbe=com.wildfire.client.route.RouteProbeClient.freshPayload();
+            if(routeProbe!=null)com.wildfire.neoforge.appearance.OptionalPayloadSender.sendToServer(new com.wildfire.neoforge.appearance.RouteProbePacket(routeProbe));
+        });
         NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, _ -> {
             AppearanceState.deactivate();
             Minecraft.getInstance().execute(() -> {
@@ -134,6 +140,7 @@ public class WildfireGenderClientNeo {
             com.wildfire.neoforge.appearance.MusicClient.clear();
             com.wildfire.neoforge.appearance.SocialClient.clear();
             com.wildfire.client.towns.TownsClient.reset();
+            com.wildfire.client.screens.ScreenClient.reset();
             com.wildfire.gui.ChatAvatars.clear();
             com.wildfire.neoforge.appearance.NotificationPreferenceSync.reset();
             com.wildfire.client.music.ListeningState.reset();
@@ -148,10 +155,14 @@ public class WildfireGenderClientNeo {
             });
         });
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, _ -> {
+            com.wildfire.client.route.RouteProbeClient.tick(Minecraft.getInstance());
+            com.wildfire.client.screens.BrowserRuntime.tick(Minecraft.getInstance().level);
+            com.wildfire.client.discord.DiscordPresence.tick(Minecraft.getInstance(),com.wildfire.neoforge.appearance.SocialClient.roleName());
+            com.wildfire.client.screens.ScreenClient.tick(Minecraft.getInstance().getConnection(),Minecraft.getInstance().level);
+            com.wildfire.client.screens.ScreenInteraction.tickAutoView();
             com.wildfire.client.music.SpringPlusSession.tick();
             if (!com.wildfire.client.music.SpringPlusSession.enabled()) return;
-            com.wildfire.client.music.PersonalMusicPlayer.serverPlaying(com.wildfire.neoforge.appearance.MusicClient.serverActive());
-            com.wildfire.client.music.SpotifyWebPlayer.serverPlaying(com.wildfire.neoforge.appearance.MusicClient.serverActive());
+            com.wildfire.client.music.MusicPriority.tick(com.wildfire.neoforge.appearance.MusicClient.serverActive());
             Minecraft minecraft = Minecraft.getInstance();
             WildfireClientEventHandler.onClientTick(minecraft);
             SyncedPlayerList.onTick(minecraft);
@@ -164,6 +175,11 @@ public class WildfireGenderClientNeo {
         });
         NeoForge.EVENT_BUS.addListener(ExtractLevelRenderStateEvent.class, CosmeticLayer::captureFirstPersonPet);
         NeoForge.EVENT_BUS.addListener(SubmitCustomGeometryEvent.class, CosmeticLayer::submitFirstPersonPet);
+        com.wildfire.client.screens.ScreenClient.configureMedia(com.wildfire.client.screens.ScreenInteraction::mediaOffer);
+        NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock.class,event->{
+            if(event.getLevel().isClientSide()&&event.getFace()!=null&&com.wildfire.client.screens.ScreenInteraction.use(new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(event.getPos()),event.getFace(),event.getPos(),false))){event.setCanceled(true);event.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);}
+        });
+        NeoForge.EVENT_BUS.addListener(SubmitCustomGeometryEvent.class,event->com.wildfire.client.screens.ScreenWorldRenderer.submit(event.getPoseStack(),event.getSubmitNodeCollector(),event.getLevelRenderState().cameraRenderState));
         NeoForge.EVENT_BUS.addListener(ScreenEvent.Init.Post.class, AppearanceInventoryButton::onInit);
         NeoForge.EVENT_BUS.addListener(ScreenEvent.Init.Post.class, NotificationChatButton::onInit);
         NeoForge.EVENT_BUS.addListener(ScreenEvent.Render.Pre.class, AppearanceInventoryButton::onRender);

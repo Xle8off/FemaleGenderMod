@@ -24,7 +24,8 @@ public final class AppearanceInventoryButton extends Button {
 
     public static void onInit(ScreenEvent.Init.Post event) {
         if (!com.wildfire.client.music.SpringPlusSession.enabled()) return;
-        if (!(event.getScreen() instanceof InventoryScreen screen)) return;
+        var screen=event.getScreen();
+        if (!(screen instanceof InventoryScreen || screen instanceof net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen)) return;
         AppearanceInventoryButton button = new AppearanceInventoryButton(
             ((ContainerPositionAccessor) screen).springplus$getLeftPos() + 129, screen.height / 2 - 22);
         button.refresh(screen);
@@ -32,16 +33,22 @@ public final class AppearanceInventoryButton extends Button {
     }
 
     public static void onRender(ScreenEvent.Render.Pre event) {
-        if (!(event.getScreen() instanceof InventoryScreen screen)) return;
+        var screen=event.getScreen();
+        if (!(screen instanceof InventoryScreen || screen instanceof net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen)) return;
         for (var listener : screen.children()) {
             if (listener instanceof AppearanceInventoryButton button) button.refresh(screen);
         }
     }
 
-    private void refresh(InventoryScreen screen) {
+    private void refresh(net.minecraft.client.gui.screens.Screen screen) {
         setX(((ContainerPositionAccessor) screen).springplus$getLeftPos() + 129);
         setY(screen.height / 2 - 22);
         active = AppearanceState.isActive();
+        if(screen instanceof net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen creative){
+            setX(((ContainerPositionAccessor)screen).springplus$getLeftPos()+145);
+            setY(((ContainerPositionAccessor)screen).springplus$getTopPos()+24);
+            visible=creative.isInventoryOpen();active&=visible;
+        }
         setTooltip(Tooltip.create(active
             ? Component.literal("Открыть кастомизацию персонажа")
             : Component.literal("Кастомизация доступна только на сервере")

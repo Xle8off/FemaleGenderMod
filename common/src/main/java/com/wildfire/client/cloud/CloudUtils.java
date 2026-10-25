@@ -1,0 +1,44 @@
+package com.wildfire.client.cloud;
+
+import com.mojang.authlib.minecraft.MinecraftSessionService;
+import com.mojang.authlib.yggdrasil.YggdrasilMinecraftSessionService;
+import com.wildfire.client.ClientHelper;
+import com.wildfire.common.WildfireGender;
+import net.minecraft.client.Minecraft;
+
+public final class CloudUtils {
+   private static boolean loggedSessionTamperWarning = false;
+   private static final String EXPECTED_YGGDRASIL_BASE_URL = "https://sessionserver.mojang.com/session/minecraft/";
+
+   private CloudUtils() {
+      throw new UnsupportedOperationException();
+   }
+
+   static MinecraftSessionService getSessionService() {
+      return Minecraft.getInstance().services().sessionService();
+   }
+
+   static boolean hasTheSessionServiceBeenTamperedWith() {
+      MinecraftSessionService sessionService = getSessionService();
+      if (sessionService.getClass() != YggdrasilMinecraftSessionService.class) {
+         logSessionTamperWarning(
+            "Detected likely session service tampering; got {} instead of the expected Yggdrasil session service", sessionService.getClass()
+         );
+         return true;
+      } else if (!ClientHelper.INSTANCE
+         .validateSessionUrl((YggdrasilMinecraftSessionService)sessionService, "https://sessionserver.mojang.com/session/minecraft/")) {
+         logSessionTamperWarning("Detected likely session service tampering; Yggdrasil base URL is not the expected Mojang-provided value");
+         return true;
+      } else {
+         return false;
+      }
+   }
+
+   private static void logSessionTamperWarning(String message, Object... args) {
+      if (!loggedSessionTamperWarning) {
+         WildfireGender.LOGGER.warn(message, args);
+         WildfireGender.LOGGER.warn("Cloud sync will be unavailable for this session");
+         loggedSessionTamperWarning = true;
+      }
+   }
+}

@@ -9,7 +9,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 import java.io.IOException;
-import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -62,7 +61,7 @@ public final class ModUpdate {
     private static volatile long feedbackStarted;
     private static volatile long musicPopupUntil;
     public record PopupAction(String kind, String target) {}
-    private record Toast(long id, String message, String sender, float progress, PopupAction action, long started, long until) {}
+    private record Toast(long id, String message, String sender, float progress, PopupAction action, String preview, long started, long until) {}
     private static final List<Toast> toasts = new ArrayList<>();
     private static long nextToastId;
     private static final com.wildfire.gui.ToastControlsReveal controlsReveal=new com.wildfire.gui.ToastControlsReveal();
@@ -80,6 +79,9 @@ public final class ModUpdate {
         return List.copyOf(toasts);
     }
     private static synchronized void pushToast(String message, String sender, float progress, PopupAction action, long seconds) {
+        pushToast(message,sender,progress,action,"",seconds);
+    }
+    private static synchronized void pushToast(String message, String sender, float progress, PopupAction action, String preview, long seconds) {
         if(action!=null&&!com.wildfire.client.config.CosmeticPreferences.notificationPopups())return;
         visibleToasts();
         long now = System.nanoTime();
@@ -88,12 +90,12 @@ public final class ModUpdate {
             var previous = toasts.getLast();
             if (action == null && sender.isEmpty() && previous.action() == null && previous.sender().isEmpty()
                 && (message.equals(previous.message()) || progress >= 0 && previous.progress() >= 0)) {
-                toasts.set(toasts.size() - 1, new Toast(previous.id(), message, sender, progress, action, previous.started(), until));
+                toasts.set(toasts.size() - 1, new Toast(previous.id(), message, sender, progress, action, previous.preview(), previous.started(), until));
                 return;
             }
         }
         if (toasts.size() == 3) toasts.removeFirst();
-        toasts.add(new Toast(++nextToastId, message, sender, progress, action, now, until));
+        toasts.add(new Toast(++nextToastId, message, sender, progress, action, preview, now, until));
     }
     public static PopupAction popupAction(int slot) {
         var list = visibleToasts();
@@ -104,7 +106,7 @@ public final class ModUpdate {
         return slot >= 0 && slot < list.size() ? list.get(slot).id() : -1;
     }
     public static synchronized void dismissPopup(long id) { toasts.removeIf(toast -> toast.id() == id); }
-    private static int toastHeight(Toast toast) { return com.wildfire.gui.ToastControlsReveal.height(toast.action()!=null,popupControlsReveal()); }
+    private static int toastHeight(Toast toast) { return toast.preview().isEmpty()?com.wildfire.gui.ToastControlsReveal.height(toast.action()!=null,popupControlsReveal()):110; }
     private static int toastY(List<Toast> list, int slot, long now) {
         int y = topInset();
         for (int index = 0; index < slot; index++) y += toastHeight(list.get(index)) + 5;
@@ -116,7 +118,7 @@ public final class ModUpdate {
     public static int popupActionY(int slot) {
         var list = visibleToasts();
         return slot >= 0 && slot < list.size() && list.get(slot).action() != null
-            ? toastY(list, slot, System.nanoTime()) + 40 : -100;
+            ? toastY(list, slot, System.nanoTime()) + (list.get(slot).preview().isEmpty()?40:84) : -100;
     }
     private static volatile long lastOverlayCheck;
     private static volatile int overlayTopInset;
@@ -159,6 +161,7 @@ public final class ModUpdate {
     public static void transientFeedback(String message, float progress, long seconds) {
         showFeedback(message.length() > 36 ? message.substring(0, 35) + "…" : message, progress, seconds);
     }
+    public static void streamFeedback(String streamer,String platform,String title,String url,String preview,int viewers){String message=title+(viewers>=0?" · "+viewers+" зр.":"");pushToast(message.length()>44?message.substring(0,43)+"…":message,streamer+" · "+platform,-1f,new PopupAction("stream",url),preview,22);}
 
     public static void notificationFeedback(String category, String title, String message) {
         String target = null;
@@ -225,7 +228,7 @@ public final class ModUpdate {
     private static void renderToast(GuiGraphicsExtractor graphics, Toast toast, int y) {
         int width = Math.min(232, graphics.guiWidth());
         if (width < 100) return;
-        renderToastBody(graphics, toast.message(), toast.sender(), toast.progress(), width, y, toastHeight(toast));
+        renderToastBody(graphics, toast.message(), toast.sender(), toast.progress(), toast.preview(), width, y, toastHeight(toast));
     }
     private static void renderLegacyHud(GuiGraphicsExtractor graphics) {
         long now = System.nanoTime();
@@ -233,7 +236,7 @@ public final class ModUpdate {
             renderMusicPopup(graphics, now);
         }
     }
-    private static void renderToastBody(GuiGraphicsExtractor graphics, String message, String sender, float downloadProgress, int width, int y, int height) {
+    private static void renderToastBody(GuiGraphicsExtractor graphics, String message, String sender, float downloadProgress, String preview, int width, int y, int height) {
         RoundedPanels.fill(graphics, 0, y, width, y + height, com.wildfire.gui.UiTheme.BACKGROUND, 6);
         RoundedPanels.fillLeftBar(graphics, 0, y, 3, y + height, com.wildfire.gui.UiTheme.ACCENT);
         int inset = sender.isEmpty() ? 10 : 36;
@@ -241,6 +244,7 @@ public final class ModUpdate {
         var font = Minecraft.getInstance().font;
         graphics.text(font, font.plainSubstrByWidth(sender.isEmpty() ? "SpringPlusCosmetics" : NotificationInbox.playerIdentity(sender), width - inset - 8-(int)Math.round(18*popupControlsReveal())), inset, y + 6, com.wildfire.gui.UiTheme.TEXT, false);
         graphics.text(font, font.plainSubstrByWidth(message, width - inset - 8), inset, y + 19, com.wildfire.gui.UiTheme.MUTED, false);
+        if(!preview.isEmpty())StreamPreviewCache.draw(graphics,preview,10,y+33,width-20,47);
         if (downloadProgress >= 0f) {
             graphics.fill(10, y + 34, width - 10, y + 37, 0xFF343A43);
             graphics.fill(10, y + 34, 10 + (int)((width - 20) * downloadProgress), y + 37, com.wildfire.gui.UiTheme.ACCENT);
@@ -530,30 +534,24 @@ public final class ModUpdate {
             && compareVersions(release.version, stagedVersion) <= 0) return;
         URI uri = URI.create(release.url);
         if (!"https".equals(uri.getScheme()) || !"skin.springplus.net".equals(uri.getHost())) throw new IOException("Недоверенный адрес");
-        var request = HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(30)).GET().build();
+        var request = HttpRequest.newBuilder(uri).timeout(Duration.ofMinutes(5)).GET().build();
         feedback("Загрузка обновления: 0%", 0f, 45);
         var response = HTTP.send(request, HttpResponse.BodyHandlers.ofInputStream());
         if (response.statusCode() != 200) { response.body().close(); throw new IOException("HTTP " + response.statusCode()); }
         long expected = response.headers().firstValueAsLong("Content-Length").orElse(-1L);
-        if (expected > 16 * 1024 * 1024) { response.body().close(); throw new IOException("Файл слишком большой"); }
-        byte[] bytes;
-        try (var input = response.body(); var output = new ByteArrayOutputStream()) {
-            byte[] chunk = new byte[32 * 1024];
-            int read, previousPercent = -1;
-            while ((read = input.read(chunk)) != -1) {
-                output.write(chunk, 0, read);
-                if (output.size() > 16 * 1024 * 1024) throw new IOException("Файл слишком большой");
-                if (expected > 0) {
-                    int percent = (int)Math.min(100, output.size() * 100L / expected);
-                    if (percent != previousPercent) { feedback("Загрузка обновления: " + percent + "%", percent / 100f, 45); previousPercent = percent; }
-                }
-            }
-            bytes = output.toByteArray();
+        Path download;
+        try { download = Files.createTempFile(".springplus-download-", ".part"); }
+        catch (IOException error) { response.body().close(); throw error; }
+        try (var input = response.body()) {
+            com.wildfire.gui.VerifiedUpdateDownload.write(input, download, expected, release.sha,
+                percent -> feedback("Загрузка обновления: " + percent + "%", percent / 100f, 45));
+        } catch (Exception error) {
+            Files.deleteIfExists(download);
+            throw error;
         }
-        if (bytes.length < 1024) throw new IOException("Неверный ответ сервера");
+        try {
         feedback("Проверка файла…", 1f, 30);
-        String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
-        if (!digest.equals(release.sha)) throw new IOException("Контрольная сумма не совпала");
+        String digest = release.sha;
         Path current = Path.of(ModUpdate.class.getProtectionDomain().getCodeSource().getLocation().toURI());
         if (!Files.isRegularFile(current) || !current.getFileName().toString().endsWith(".jar")) throw new IOException("Мод запущен не из JAR");
         if (!release.version.matches("[0-9]+\\.[0-9]+\\.[0-9]+-beta\\.[0-9]+")) throw new IOException("Неверная версия обновления");
@@ -561,8 +559,10 @@ public final class ModUpdate {
         Path staged = current.resolveSibling(".springplus-update-neoforge-pending.bin");
         Path manifest = current.resolveSibling(".springplus-update-neoforge-pending.txt");
         Path temporary = Files.createTempFile(current.getParent(), ".springplus-update-", ".part");
-        Files.write(temporary, bytes);
-        Files.move(temporary, staged, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        try {
+            Files.copy(download, temporary, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            Files.move(temporary, staged, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        } finally { Files.deleteIfExists(temporary); }
         Path manifestTemp = Files.createTempFile(current.getParent(), ".springplus-update-", ".txt");
         Files.writeString(manifestTemp, target.getFileName() + "\n" + digest + "\n");
         Files.move(manifestTemp, manifest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
@@ -572,6 +572,9 @@ public final class ModUpdate {
         }
         stagedHash = release.sha;
         stagedVersion = release.version;
+        } finally {
+            Files.deleteIfExists(download);
+        }
     }
 
     private static void startInstaller(Path current, Path staged, Path manifest) throws IOException {

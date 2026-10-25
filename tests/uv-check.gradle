@@ -15,10 +15,19 @@ allprojects { p ->
     source p.rootProject.file('tests/GroupInboxCheck.java')
     source p.rootProject.file('tests/TownsClientCheck.java')
     source p.rootProject.file('tests/PublicChatCheck.java')
+    source p.rootProject.file('tests/ChatMotionCheck.java')
+    source p.rootProject.file('tests/ServerSkinPriorityCheck.java')
+    source p.rootProject.file('tests/PlayerAssetsCheck.java')
+    source p.rootProject.file('tests/CapeGifPreviewCheck.java')
+    source p.rootProject.file('tests/VrPoseCheck.java')
     source p.rootProject.file('tests/CampaignClientCheck.java')
     source p.rootProject.file('tests/AvatarBatchCheck.java')
     source p.rootProject.file('tests/PrivateStatusCheck.java')
     source p.rootProject.file('tests/WebStickersCheck.java')
+    source p.rootProject.file('tests/OverheadMediaCheck.java')
+    source p.rootProject.file('tests/CameraOptionsCheck.java')
+    source p.rootProject.file('tests/CameraNativeCheck.java')
+    source p.rootProject.file('tests/CameraIceCheck.java')
     source p.rootProject.file('tests/StickerPreferencesCheck.java')
     source p.rootProject.file('tests/TorsoAttachmentCheck.java')
     if (p.path == ':neoforge:26.2') source p.rootProject.file('tests/EarlyNotificationLoadCheck.java')
@@ -31,6 +40,52 @@ allprojects { p ->
     classpath = p.sourceSets.main.runtimeClasspath + files(output)
     mainClass = 'PublicChatCheck'
    }
+   p.tasks.register('checkChatMotion', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'ChatMotionCheck'
+   }
+   p.tasks.register('checkServerSkinPriority', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'ServerSkinPriorityCheck'
+    args p.path == ':26.2' ? 'com.wildfire.main.networking.appearance.HdSkinClient' : 'com.wildfire.neoforge.appearance.HdSkinClient'
+   }
+   p.tasks.register('checkPlayerAssets', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'PlayerAssetsCheck'
+   }
+   p.tasks.register('checkCapeGifPreview', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'CapeGifPreviewCheck'
+   }
+   p.tasks.register('checkVrPose', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'VrPoseCheck'
+   }
+   p.tasks.register('checkOverheadMedia', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'com.wildfire.client.overhead.OverheadMediaCheck'
+   }
+   p.tasks.register('checkCameraOptions', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'CameraOptionsCheck'
+   }
+   p.tasks.register('checkCameraNative', JavaExec) {
+    dependsOn compile
+    classpath = p.sourceSets.main.runtimeClasspath + files(output)
+    mainClass = 'CameraNativeCheck'
+   }
+   p.tasks.register('checkCameraIce', JavaExec) {
+     dependsOn compile
+     classpath = p.sourceSets.main.runtimeClasspath + files(output)
+     mainClass = 'com.wildfire.client.overhead.CameraIceCheck'
+    }
    p.tasks.register('checkCampaignClient', JavaExec) {
      dependsOn compile
      classpath = p.sourceSets.main.runtimeClasspath + files(output)

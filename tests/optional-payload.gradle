@@ -1,0 +1,19 @@
+allprojects { p ->
+ afterEvaluate {
+  if(p.path in [':neoforge:26.2',':neoforge:26.3']) {
+   def output=p.layout.buildDirectory.dir('optional-payload-check')
+   def compile=p.tasks.register('compileOptionalPayloadCheck',JavaCompile) {
+    dependsOn p.tasks.named('classes')
+    source=p.rootProject.files('tests/OptionalPayloadSenderCheck.java')
+    classpath=p.sourceSets.main.runtimeClasspath
+    destinationDirectory=output
+    options.release=25
+   }
+   p.tasks.register('checkOptionalPayload',JavaExec) {
+    dependsOn compile
+    classpath=p.sourceSets.main.runtimeClasspath+p.files(output)
+    mainClass='com.wildfire.neoforge.appearance.OptionalPayloadSenderCheck'
+   }
+  }
+ }
+}

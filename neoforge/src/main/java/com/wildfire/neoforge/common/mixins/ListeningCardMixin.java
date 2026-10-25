@@ -18,5 +18,6 @@ abstract class ListeningCardMixin {
         var snapshot = state.getRenderData(com.wildfire.neoforge.client.NeoClientHelper.STATE);
         if(snapshot != null) com.wildfire.client.music.ListeningLabelRenderer.submit(snapshot.entityUUID, state, pose, collector, camera);
         if(snapshot != null) com.wildfire.client.music.MenuWorldRenderer.submit(snapshot.entityUUID, state, pose, collector, camera);
+        if(snapshot != null) com.wildfire.client.overhead.OverheadMediaRenderer.submit(snapshot.entityUUID,state,pose,collector,camera);
     }
 }

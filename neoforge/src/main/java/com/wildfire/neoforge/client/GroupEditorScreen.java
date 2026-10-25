@@ -70,6 +70,9 @@ public final class GroupEditorScreen extends Screen {
         String status=!pending.isEmpty()?"Сохраняем…":!error.isEmpty()?error:!GroupInbox.supported()?GroupInbox.status():"";
         g.text(font,font.plainSubstrByWidth(status,panelWidth-24),left+12,height-85,error.isEmpty()?UiTheme.MUTED:0xFFFF5264,false);
         super.extractRenderState(g,mx,my,delta);
+        var visibleRows=rows();
+        for(int i=0;i<choices.size()&&offset+i<visibleRows.size();i++)
+            com.wildfire.gui.ModPresence.draw(g,visibleRows.get(offset+i),left+panelWidth-24,107+i*22,mx,my);
     }
     @Override public boolean mouseScrolled(double x,double y,double sx,double sy){if(x>=left&&x<left+panelWidth&&y>=102&&y<height-102){offset=Math.clamp(offset-(int)Math.signum(sy)*3,0,Math.max(0,rows().size()-choices.size()));return true;}return super.mouseScrolled(x,y,sx,sy);}
     @Override public void onClose(){minecraft.gui.setScreen(parent);}

@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(AvatarRenderer.class)
+@Mixin(value = AvatarRenderer.class, priority = 100)
 abstract class HdAvatarMixin extends LivingEntityRenderer<Avatar, AvatarRenderState, HumanoidModel<AvatarRenderState>> {
     private HdAvatarMixin(EntityRendererProvider.Context context, HumanoidModel<AvatarRenderState> model, float shadow) {
         super(context, model, shadow);
@@ -21,5 +21,6 @@ abstract class HdAvatarMixin extends LivingEntityRenderer<Avatar, AvatarRenderSt
     @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;F)V", at = @At("TAIL"))
     private void springplus$hdSkin(Avatar avatar, AvatarRenderState state, float partialTick, CallbackInfo ci) {
         state.skin = HdSkinClient.skin(avatar.getUUID(), state.skin);
+        com.wildfire.client.vr.VrPoseClient.bind(avatar.getUUID(),state);
     }
 }

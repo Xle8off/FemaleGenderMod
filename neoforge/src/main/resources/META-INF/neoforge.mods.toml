@@ -16,6 +16,8 @@ issueTrackerURL = "${issue_tracker}"
     config = "${mod_id}.mixins.json"
 [[mixins]]
     config = "${mod_id}.neo.mixins.json"
+[[mixins]]
+    config = "inflow.mixins.json"
 
 [[dependencies.${mod_id}]]
     modId = "minecraft"

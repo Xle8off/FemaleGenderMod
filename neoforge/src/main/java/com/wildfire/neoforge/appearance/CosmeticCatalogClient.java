@@ -53,7 +53,7 @@ public final class CosmeticCatalogClient {
             if(requestGeneration!=generation||ENTRIES.get(id)!=entry)return;
             if(loaded!=null){PACKAGES.put(id,loaded);if(prefetchId==id)prefetchId=0;}
             else { ModUpdate.cosmeticFeedback("Загружаем косметику: " + entry.name(), 0f, 32);
-                ClientPacketDistributor.sendToServer(new CosmeticCatalogPackets.Request(id,entry.hash())); }
+                OptionalPayloadSender.sendToServer(new CosmeticCatalogPackets.Request(id,entry.hash())); }
         }));
         return null;
     }

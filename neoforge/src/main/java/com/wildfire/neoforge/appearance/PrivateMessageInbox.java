@@ -12,6 +12,11 @@ import java.util.Map;
 public final class PrivateMessageInbox {
     private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("SpringPlus private messages");
     public record Message(long receivedAt, boolean outgoing, String body) {}
+    public static synchronized boolean isRead(String partner,long time){
+        Thread thread=THREADS.get(partner.toLowerCase(java.util.Locale.ROOT));
+        return thread!=null&&thread.readThrough>0&&time<=thread.readThrough;
+    }
+    public static void pollReadReceipts(){if(!openPartner.isEmpty())requestHistory(openPartner);}
     public record Conversation(String partner, int unread, long updatedAt, boolean online, String role) {}
     private static final int MAX_PARTNERS = 40;
     private static final int MAX_MESSAGES = 100;
@@ -25,14 +30,15 @@ public final class PrivateMessageInbox {
         if (!partner.matches("[A-Za-z0-9_]{1,16}") || now - lastTypingSent < 2000
             || net.minecraft.client.Minecraft.getInstance().getConnection() == null) return;
         lastTypingSent = now;
-        ClientPacketDistributor.sendToServer(new MessagePackets.Request((byte) 3, partner));
+        OptionalPayloadSender.sendToServer(new MessagePackets.Request((byte) 3, partner));
     }
     public static void activity(String partner,String state) {
         if(!partner.matches("[A-Za-z0-9_]{1,16}") || net.minecraft.client.Minecraft.getInstance().getConnection()==null)return;
         byte kind=switch(state){case "typing" -> 3;case "sticker" -> 4;case "emoji" -> 5;default -> 6;};
-        ClientPacketDistributor.sendToServer(new MessagePackets.Request(kind,partner));
+        OptionalPayloadSender.sendToServer(new MessagePackets.Request(kind,partner));
     }
-    public static void requestImageTicket(){ClientPacketDistributor.sendToServer(new MessagePackets.Request((byte)7,""));}
+    public static void requestImageTicket(){OptionalPayloadSender.sendToServer(new MessagePackets.Request((byte)7,""));}
+    public static void requestAssetTicket(String kind){if(!com.wildfire.client.music.SpringPlusSession.enabled())throw new IllegalStateException("Нет соединения");OptionalPayloadSender.sendToServer(new MessagePackets.Request((byte)(kind.equals("skin")?9:10),""));}
     public static String presence(String partner) {
         String activity=com.wildfire.gui.ChatActivity.label(partner,false);
         if(!activity.isEmpty())return activity;
@@ -62,6 +68,7 @@ public final class PrivateMessageInbox {
         final List<Message> messages = new ArrayList<>();
         int unread;
         long updatedAt;
+        long readThrough;
         boolean online;
         boolean afk;
         boolean dnd;
@@ -140,7 +147,7 @@ public final class PrivateMessageInbox {
         if (net.minecraft.client.Minecraft.getInstance().getConnection() == null) return;
         lastContactsSent = now;
         if (net.minecraft.client.Minecraft.getInstance().getConnection() != null)
-            ClientPacketDistributor.sendToServer(new MessagePackets.Request((byte) 1, ""));
+            OptionalPayloadSender.sendToServer(new MessagePackets.Request((byte) 1, ""));
         else LOGGER.warn("Cannot request private message contacts: not connected");
     }
 
@@ -153,15 +160,24 @@ public final class PrivateMessageInbox {
         lastHistorySent.put(key, now);
         if (partner.matches("[A-Za-z0-9_]{1,16}")) HISTORY_REQUESTS.put(partner.toLowerCase(java.util.Locale.ROOT), System.currentTimeMillis());
         if (partner.matches("[A-Za-z0-9_]{1,16}") && net.minecraft.client.Minecraft.getInstance().getConnection() != null)
-            ClientPacketDistributor.sendToServer(new MessagePackets.Request((byte) 2, partner));
+            OptionalPayloadSender.sendToServer(new MessagePackets.Request((byte) 2, partner));
         else LOGGER.warn("Cannot request private message history for {}: not connected", partner);
     }
 
     public static synchronized void accept(String json) {
         try {
             var root = JsonParser.parseString(json).getAsJsonObject();
+            if(root.has("assetTicket")){com.wildfire.gui.PlayerAssetUpload.ticket(root);return;}
+            com.wildfire.gui.ModPresence.accept(root);
             if(root.has("imageTicket")){com.wildfire.gui.ChatImages.ticket(root);return;}
             String partner = root.get("partner").getAsString();
+            if(root.has("receiptOnly")){
+                if(partner.matches("[A-Za-z0-9_]{1,16}")){
+                    Thread thread=THREADS.computeIfAbsent(partner.toLowerCase(java.util.Locale.ROOT),ignored->new Thread(partner));
+                    thread.readThrough=Math.max(thread.readThrough,Math.max(0,root.get("readThrough").getAsLong()));
+                }
+                return;
+            }
             if (root.has("presenceOnly")) {
                 String key = partner.toLowerCase(java.util.Locale.ROOT);
                 Thread current = THREADS.get(key);
@@ -207,6 +223,7 @@ public final class PrivateMessageInbox {
             HISTORY_REQUESTS.remove(partner.toLowerCase(java.util.Locale.ROOT));
             HISTORY_LOADED.add(partner.toLowerCase(java.util.Locale.ROOT));
             Thread thread = THREADS.computeIfAbsent(partner.toLowerCase(java.util.Locale.ROOT), ignored -> new Thread(partner));
+            if(root.has("readThrough"))thread.readThrough=Math.max(thread.readThrough,Math.max(0,root.get("readThrough").getAsLong()));
             if (root.has("presenceVerified") && root.get("presenceVerified").getAsBoolean()) {
                 thread.online = root.has("online") && root.get("online").getAsBoolean();
                 thread.afk = thread.online && root.has("afk") && root.get("afk").getAsBoolean();
@@ -220,13 +237,20 @@ public final class PrivateMessageInbox {
                 long time = row.get("createdAtEpochMillis").getAsLong();
                 boolean outgoing = !row.get("incoming").getAsBoolean();
                 String body = row.get("body").getAsString();
-                if (thread.messages.stream().noneMatch(message -> message.outgoing() == outgoing
-                    && message.body().equals(body) && Math.abs(time - message.receivedAt()) < 4_000L))
-                    thread.messages.add(new Message(time, outgoing, body));
+                int duplicate=-1;
+                for(int i=0;i<thread.messages.size();i++){
+                    var message=thread.messages.get(i);
+                    if(message.outgoing()==outgoing&&message.body().equals(body)&&Math.abs(time-message.receivedAt())<4000L){duplicate=i;break;}
+                }
+                if(duplicate<0)thread.messages.add(new Message(time,outgoing,body));
+                else thread.messages.set(duplicate,new Message(time,outgoing,body)); // Server timestamp, not local arrival time.
                 thread.updatedAt = Math.max(thread.updatedAt, time);
             }
             thread.messages.sort(Comparator.comparingLong(Message::receivedAt));
             while (thread.messages.size() > MAX_MESSAGES) thread.messages.removeFirst();
+            if(root.has("receiptSupport")&&root.get("receiptSupport").getAsBoolean()&&openPartner.equals(partner.toLowerCase(java.util.Locale.ROOT))
+                &&net.minecraft.client.Minecraft.getInstance().getConnection()!=null)
+                OptionalPayloadSender.sendToServer(new MessagePackets.Request((byte)8,partner));
             LOGGER.info("Private message history received: partner={} count={}", partner, root.getAsJsonArray("messages").size());
         } catch (Exception error) { LOGGER.warn("Could not read private message snapshot", error); }
     }
