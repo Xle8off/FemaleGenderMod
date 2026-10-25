@@ -255,7 +255,7 @@ public class BreastPhysics {
     }
 
     private void tickArmSwing(LivingEntity entity, RandomSource random, final float bounceIntensity) {
-        int swingDuration = entity.getCurrentSwingDuration();
+        int swingDuration = (entity.getCurrentSwing()==null?6:entity.getCurrentSwing().durationTicks());
         // Require that either the current swing duration is 2 ticks, or the swing duration from the previous tick is,
         // as any faster and the arm effectively doesn't swing at all; we check the previous tick's swing duration for
         // reasons explained later on in this block
@@ -269,14 +269,14 @@ public class BreastPhysics {
             // Cap our amplifier at the swing durations of Mining Fatigue IV/Haste II
             float amplifier = Math.clamp(1 + rawAmplifier, 0.6f, 1.3f);
 
-            HumanoidArm swingingArm = entity.swingingArm == InteractionHand.MAIN_HAND ? entity.getMainArm() : entity.getMainArm().getOpposite();
-            int swingTickDelta = entity.swingTime - lastSwingTick;
+            HumanoidArm swingingArm = (entity.getCurrentSwing()==null?InteractionHand.MAIN_HAND:entity.getCurrentSwing().hand()) == InteractionHand.MAIN_HAND ? entity.getMainArm() : entity.getMainArm().getOpposite();
+            int swingTickDelta = (int)(entity.getSwingAnimation(0)*swingDuration) - lastSwingTick;
             float swingProgress = distanceFromMedian(0, lastSwingDuration, Math.clamp(lastSwingTick, 0, lastSwingDuration));
             HumanoidArm swingingToward = swingProgress > -0.2f ? swingingArm.getOpposite() : swingingArm;
 
             // consistently apply even with short swing durations, such as with haste
             int everyNthTick = Math.clamp(swingDuration - 1, 1, 5);
-            if(entity.swinging && entity.tickCount % everyNthTick == 0) {
+            if(entity.isSwinging() && entity.tickCount % everyNthTick == 0) {
                 this.targetBounceY += (random.nextBoolean() ? -0.25f : 0.25f) * amplifier * bounceIntensity;
                 // The regular amplifier here makes this look relatively unnatural at high levels of mining fatigue,
                 // so instead we're increasing the potency of negative amplifiers (and decreasing positive amplifiers),
@@ -293,14 +293,14 @@ public class BreastPhysics {
                 // haste being used to reset a player's swing; one notable example of this is Wynncraft's spell casting,
                 // which applies haste to the player when a spell is successfully cast.
                 this.targetRotVel += (swingingArm == HumanoidArm.RIGHT ? -4f : 4f) * Math.abs(swingProgress) * bounceIntensity;
-            } else if(entity.swinging && swingDuration > 1) {
+            } else if(entity.isSwinging() && swingDuration > 1) {
                 // Otherwise if the swing animation isn't interrupted, attempt to rotate slightly counter to the
                 // direction that the body is currently moving
                 this.targetRotVel += (swingingToward == HumanoidArm.RIGHT ? -0.2f : 0.2f) * amplifier * bounceIntensity;
             }
-            lastSwingTick = entity.swingTime;
+            lastSwingTick = (int)(entity.getSwingAnimation(0)*swingDuration);
         }
-        if(!entity.swinging) {
+        if(!entity.isSwinging()) {
             lastSwingTick = 0;
         }
         lastSwingDuration = Math.max(swingDuration, 1);

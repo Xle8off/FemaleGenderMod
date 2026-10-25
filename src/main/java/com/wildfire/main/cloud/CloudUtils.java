@@ -18,8 +18,8 @@
 
 package com.wildfire.main.cloud;
 
-import com.mojang.authlib.minecraft.MinecraftSessionService;
-import com.mojang.authlib.yggdrasil.YggdrasilMinecraftSessionService;
+import com.mojang.authlib.minecraft.SessionService;
+import com.mojang.authlib.services.MinecraftServicesSessionService;
 import com.wildfire.main.WildfireGender;
 import com.wildfire.mixins.accessors.YggdrasilMinecraftSessionServiceAccessor;
 import net.minecraft.client.Minecraft;
@@ -34,7 +34,7 @@ public final class CloudUtils {
     private static boolean loggedSessionTamperWarning = false;
     private static final String EXPECTED_YGGDRASIL_BASE_URL = "https://sessionserver.mojang.com/session/minecraft/";
 
-    static MinecraftSessionService getSessionService() {
+    static SessionService getSessionService() {
         return Minecraft.getInstance().services().sessionService();
     }
 
@@ -43,19 +43,24 @@ public final class CloudUtils {
 
         // minecraft normally uses yggdrasil here; if this is not the case, either mojang has made some serious
         // changes to sessions, or someone is replacing this with something that shouldn't be here.
-        if(sessionService.getClass() != YggdrasilMinecraftSessionService.class) {
+        if(sessionService.getClass() != MinecraftServicesSessionService.class) {
             logSessionTamperWarning("Detected likely session service tampering; got {} instead of the expected Yggdrasil session service", sessionService.getClass());
             return true;
         } else {
             // additionally verify for potential cracked client tampering here
             var accessor = (YggdrasilMinecraftSessionServiceAccessor) sessionService;
-            if(!Objects.equals(accessor.getBaseUrl(), EXPECTED_YGGDRASIL_BASE_URL)) {
+            if(!trustedEndpoint(accessor.getDiscoveryService().getUrl(com.mojang.authlib.services.response.discovery.Service.SESSION,"join"))) {
                 logSessionTamperWarning("Detected likely session service tampering; Yggdrasil base URL is not the expected Mojang-provided value");
                 return true;
             }
         }
 
         return false;
+    }
+
+    private static boolean trustedEndpoint(String value){
+        try{var uri=java.net.URI.create(value);return "https".equals(uri.getScheme())&&uri.getUserInfo()==null&&(uri.getPort()==-1||uri.getPort()==443)&&java.util.Set.of("sessionserver.mojang.com","api.minecraftservices.com").contains(uri.getHost());}
+        catch(RuntimeException invalid){return false;}
     }
 
     @SuppressWarnings("SameParameterValue")

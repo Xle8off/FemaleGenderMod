@@ -23,7 +23,7 @@ public final class MenuWorldRenderer {
     public static boolean gesture(UUID owner,AvatarRenderState state,HumanoidModel<?> model) {
         var view=view(owner);
         if(view==null||state.isInvisible||state.isInvisibleToPlayer||state.pose==net.minecraft.world.entity.Pose.SLEEPING||state.isPassenger
-            ||state.attackTime>0||state.isUsingItem||com.wildfire.client.render.EmoteMotionBridge.blocksGesture(state))return false;
+            ||state.swingAnimation>0||state.isUsingItem||com.wildfire.client.render.EmoteMotionBridge.blocksGesture(state))return false;
         ModelPart arm=model.rightArm;
         float weight=view.amount();
         arm.xRot=arm.xRot+(-.45f-arm.xRot)*weight;
@@ -41,13 +41,13 @@ public final class MenuWorldRenderer {
         final float amount=view.amount();final int category=view.category();
         pose.pushPose();
         try {
-            pose.mulPose(Axis.YP.rotationDegrees(180f-state.bodyRot));
+            pose.rotate(Axis.YP.rotationDegrees(180f-state.bodyRot));
             // Outside the torso silhouette: the owner can inspect it in rear-view F5.
             pose.translate(.58,1.25,-.65);
-            pose.mulPose(Axis.XP.rotationDegrees(-12f));
+            pose.rotate(Axis.XP.rotationDegrees(-12f));
             float side=Math.cos(Math.toRadians(camera.yRot-state.bodyRot))>=0?1f:-1f;
             pose.scale(.009f*amount,-.009f*amount,.009f*side);
-            out.submitCustomGeometry(pose,RenderTypes.textBackground(),(matrix,vertices)->{
+            out.submitCustomGeometry(pose,RenderTypes.debugQuads(),(matrix,vertices)->{
                 rect(matrix,vertices,-40,-24,40,24,0,alpha(0x202733,amount*.9f));
                 rect(matrix,vertices,-39,-23,-37,23,.02f,alpha(0xB681D4,amount));
                 rect(matrix,vertices,-32,-17,32,-14,.02f,alpha(0x8893A5,amount*.8f));
@@ -66,11 +66,6 @@ public final class MenuWorldRenderer {
         v.addVertex(matrix,x1,y2,z).setColor(color).setLight(0xF000F0);
         v.addVertex(matrix,x2,y2,z).setColor(color).setLight(0xF000F0);
         v.addVertex(matrix,x2,y1,z).setColor(color).setLight(0xF000F0);
-        // Avoid doubling opacity on uncullable text pipelines; support culling pipelines too.
-        if(!net.minecraft.client.renderer.RenderPipelines.TEXT_BACKGROUND.isCull())return;
-        v.addVertex(matrix,x2,y1,z).setColor(color).setLight(0xF000F0);
-        v.addVertex(matrix,x2,y2,z).setColor(color).setLight(0xF000F0);
-        v.addVertex(matrix,x1,y2,z).setColor(color).setLight(0xF000F0);
-        v.addVertex(matrix,x1,y1,z).setColor(color).setLight(0xF000F0);
+        // DEBUG_QUADS is two-sided; submit each quad only once.
     }
 }

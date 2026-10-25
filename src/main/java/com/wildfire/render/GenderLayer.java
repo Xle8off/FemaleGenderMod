@@ -236,7 +236,7 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
             matrixStack.translate(side.leftOrNegate(-0.0625f * 2), 0, 0);
         }
         if(bounceEnabled && !softMesh) {
-            matrixStack.mulPose(Axis.YP.rotationDegrees(side.forSide(lPhysBounceRotation, rPhysBounceRotation)));
+            matrixStack.rotate(Axis.YP.rotationDegrees(side.forSide(lPhysBounceRotation, rPhysBounceRotation)));
         }
         if(!isUniboob) {
             matrixStack.translate(side.leftOrNegate(0.0625f * 2), 0, 0);
@@ -268,7 +268,7 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
             rotationTransform.rotateX(f5 * Mth.DEG_TO_RAD);
         }
 
-        matrixStack.mulPose(rotationTransform);
+        matrixStack.rotate(rotationTransform);
         if (bounceEnabled) {
             var motion = com.wildfire.client.render.TorsoMotionPhysics.sample(
                 genderState.entityUUID, model.root(), model.body, state.ageInTicks);
@@ -287,8 +287,8 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
                 deformationX = movement.x() * softPhysicsScale;
                 deformationY = movement.y() * softPhysicsScale;
             } else {
-                matrixStack.mulPose(Axis.XP.rotationDegrees(motion.pitch()));
-                matrixStack.mulPose(Axis.ZP.rotationDegrees(side.leftOrNegate(motion.roll())));
+                matrixStack.rotate(Axis.XP.rotationDegrees(motion.pitch()));
+                matrixStack.rotate(Axis.ZP.rotationDegrees(side.leftOrNegate(motion.roll())));
             }
         }
         matrixStack.scale(0.9995f, 1f, 1f); //z-fighting FIXXX
@@ -313,11 +313,11 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
         //Note: While the living entity renderer uses the light coords, we mirror Deadmau5EarsLayer and use the passed in light coords
         // (which the renderer passes the state's light coords in, but we might as well be consistent with how vanilla does extra body parts as a layer)
         var model = side.forSide(lBreast, rBreast);
-        nodeCollector.submitModel(new BreastModel(model, deformationX, deformationY), state, poseStack, type, lightCoords, overlayCoords, baseColor, null, state.outlineColor, null);
+        nodeCollector.submitModel(new BreastModel(model, deformationX, deformationY), state, poseStack, type, lightCoords, overlayCoords, baseColor, null, state.outlineColor);
 
         if (genderState.hasJacketLayer) {
             var jacketModel = side.forSide(lBreastWear, rBreastWear);
-            nodeCollector.order(1).submitModel(new BreastModel(jacketModel, deformationX, deformationY), state, poseStack, type, lightCoords, overlayCoords, baseColor, null, state.outlineColor, null);
+            nodeCollector.order(1).submitModel(new BreastModel(jacketModel, deformationX, deformationY), state, poseStack, type, lightCoords, overlayCoords, baseColor, null, state.outlineColor);
         }
 
         int shirt = ServerAppearanceSync.cosmetics(genderState.entityUUID).shirt();
@@ -328,7 +328,7 @@ public class GenderLayer<STATE extends HumanoidRenderState, MODEL extends Humano
             var shirtModel = side.forSide(lBreastShirt, rBreastShirt);
             nodeCollector.order(2).submitModel(new BreastModel(shirtModel, deformationX, deformationY), state, poseStack,
                 RenderTypes.entityCutout(custom == null ? CosmeticLayer.FABRIC : custom), lightCoords, overlayCoords,
-                color, null, state.outlineColor, null);
+                color, null, state.outlineColor);
         }
     }
 

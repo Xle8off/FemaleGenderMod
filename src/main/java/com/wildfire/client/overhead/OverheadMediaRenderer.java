@@ -30,7 +30,7 @@ public final class OverheadMediaRenderer {
         if(!video&&(!CosmeticPreferences.overheadMessages()||view.message()==null))return;
         pose.pushPose();
         try{
-            pose.translate(0,state.boundingBoxHeight+(video?1.0:1.6),0);pose.mulPose(camera.orientation);pose.scale(.018f,-.018f,.018f);
+            pose.translate(0,state.boundingBoxHeight+(video?1.0:1.6),0);pose.rotate(camera.orientation);pose.scale(.018f,-.018f,.018f);
             if(video){camera(owner,view,pose,out);return;}
             var message=view.message();var sticker=com.wildfire.gui.WebStickers.message(message.body());
             if(sticker!=null){
@@ -44,7 +44,7 @@ public final class OverheadMediaRenderer {
                 return new Text(lines,Math.max(24,lines.stream().mapToInt(client.font::width).max().orElse(24))+12);
             });
             float left=-prepared.width/2f,top=-prepared.lines.size()*10f/2-5,bottom=-top;
-            out.submitCustomGeometry(pose,RenderTypes.textBackground(),(matrix,v)->{
+            out.submitCustomGeometry(pose,RenderTypes.debugQuads(),(matrix,v)->{
                 rect(matrix,v,left+3,top,left+prepared.width-3,top+3,0xD91B2029);
                 rect(matrix,v,left,top+3,left+prepared.width,bottom-3,0xD91B2029);
                 rect(matrix,v,left+3,bottom-3,left+prepared.width-3,bottom,0xD91B2029);

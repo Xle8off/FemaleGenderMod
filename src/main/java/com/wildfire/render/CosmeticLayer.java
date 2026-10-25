@@ -40,21 +40,6 @@ import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 public final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
     public record GuiPreview(Model.Simple model, Identifier texture) {}
 
-    /** Moves head-attached geometry into the centre of a standalone GUI tile. */
-    private static final class HeadwearGuiModel extends Model.Simple {
-        private HeadwearGuiModel(net.minecraft.client.model.geom.ModelPart root) {
-            super(root, RenderTypes::entityCutout);
-        }
-
-        @Override
-        public void renderToBuffer(PoseStack pose, VertexConsumer vertices, int light, int overlay, int color) {
-            pose.pushPose();
-            pose.translate(0f, 1.05f, 0f);
-            super.renderToBuffer(pose, vertices, light, overlay, color);
-            pose.popPose();
-        }
-    }
-
     /** Uses the exact baked catalog geometry and texture in the GUI picture-in-picture renderer. */
     public static GuiPreview guiPreview(int networkId, boolean headwear) {
         // Headwear IDs 1 and 2 overlap the first pet IDs in the remote catalog.
@@ -62,7 +47,7 @@ public final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerMo
         if (headwear && (networkId == 1 || networkId == 2)) {
             var model = networkId == 1 ? CAP : HALO;
             var accessory = model.head.getChild(networkId == 1 ? "cap" : "halo");
-            return new GuiPreview(new HeadwearGuiModel(accessory),
+            return new GuiPreview(new Model.Simple(accessory, RenderTypes::entityCutout),
                 accessoryPreviewTexture(networkId));
         }
         var entry = CosmeticCatalogClient.entry(networkId);
@@ -77,7 +62,7 @@ public final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerMo
             asset.model.setupAnim(new AvatarRenderState());
             // The catalog model may have been baked with its cosmetic bone at the
             // root rather than under BODY. The cached GUI model knows its own root.
-            return new GuiPreview(headwear ? new HeadwearGuiModel(asset.guiModel.root()) : asset.guiModel, asset.texture);
+            return new GuiPreview(asset.guiModel, asset.texture);
         }
         if (!headwear && networkId > 0 && networkId < CHIBI.length) {
             CHIBI[networkId].setupAnim(new AvatarRenderState());
@@ -417,7 +402,7 @@ public final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerMo
 
     private static void render(SubmitNodeCollector queue, PlayerModel model, AvatarRenderState state, PoseStack pose,
                                net.minecraft.client.renderer.rendertype.RenderType type, int light, int overlay, int color) {
-        if (color != 0) queue.submitModel(model, state, pose, type, light, overlay, color, null, state.outlineColor, null);
+        if (color != 0) queue.submitModel(model, state, pose, type, light, overlay, color, null, state.outlineColor);
     }
 
     private static void renderPet(SubmitNodeCollector queue, PlayerModel model, AvatarRenderState state,
@@ -541,7 +526,7 @@ public final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerMo
         if(!walking)pose.translate(0, Math.sin(state.ageInTicks * 0.14f) * 0.04f * inverseScale, 0);
         float petScale = (float)(0.32 * 0.9375 * inverseScale);
         pose.scale(petScale, petScale, petScale);
-        if(turn!=0)pose.mulPose(Axis.YP.rotationDegrees(turn));
+        if(turn!=0)pose.rotate(Axis.YP.rotationDegrees(turn));
         render(queue, model, state, pose, type, light, overlay, color);
         if (secondModel != null) render(queue, secondModel, state, pose, type, light, overlay, secondColor);
         pose.popPose();
@@ -577,7 +562,7 @@ public final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerMo
             if(camera==null)return;
             var pose=context.poseStack();pose.pushPose();
             pose.translate(state.x-camera.x,state.y-camera.y,state.z-camera.z);
-            pose.mulPose(Axis.YP.rotationDegrees(180f-state.bodyRot));
+            pose.rotate(Axis.YP.rotationDegrees(180f-state.bodyRot));
             pose.scale(-0.9375f,-0.9375f,0.9375f);pose.translate(0,-1.501f,0);
             renderRelationship(context.submitNodeCollector(),state,pose,state.lightCoords,
                 LivingEntityRenderer.getOverlayCoords(state,0),frame.owner,frame.pet);
@@ -599,7 +584,7 @@ public final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerMo
         var pose = context.poseStack();
         pose.pushPose();
         pose.translate(state.x - camera.x, state.y - camera.y, state.z - camera.z);
-        pose.mulPose(Axis.YP.rotationDegrees(180f - state.bodyRot));
+        pose.rotate(Axis.YP.rotationDegrees(180f - state.bodyRot));
         pose.scale(-0.9375f, -0.9375f, 0.9375f);
         pose.translate(0, -1.501f, 0);
         renderPet(context.submitNodeCollector(), model, state, pose, RenderTypes.entityCutout(texture),

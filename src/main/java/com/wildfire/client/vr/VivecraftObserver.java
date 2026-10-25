@@ -22,7 +22,7 @@ public final class VivecraftObserver {
  public static void configure(Consumer<byte[]> sender,BooleanSupplier channel){send=sender;available=channel;}
  public static void reset(){lastHello=0;acknowledged=false;attempts=0;}
  public static byte[] hello(){
-  byte[] text="Vivecraft 26.2-1.3.15 SpringPlus NONVR\n0\n0".getBytes(StandardCharsets.UTF_8);
+  byte[] text="Vivecraft 26.3-1.3.15 SpringPlus NONVR\n0\n0".getBytes(StandardCharsets.UTF_8);
   byte[] bytes=new byte[text.length+1];System.arraycopy(text,0,bytes,1,text.length);return bytes;
  }
  public static void tick(){

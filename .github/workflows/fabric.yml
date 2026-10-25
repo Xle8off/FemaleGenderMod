@@ -1,4 +1,4 @@
-﻿name: Build Fabric mod with Gradle
+name: Build Fabric mod with Gradle
 on: [pull_request, push]
 permissions:
   contents: read

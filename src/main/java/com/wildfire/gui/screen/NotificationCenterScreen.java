@@ -1680,15 +1680,15 @@ public final class NotificationCenterScreen extends Screen implements com.wildfi
     }
 
     @Override public boolean keyPressed(KeyEvent event) {
-        if(event.key()==86&&(event.modifiers()&2)!=0&&tab==2&&conversationPartner!=null&&closingAt==0
+        if(event.isPaste()&&tab==2&&conversationPartner!=null&&closingAt==0
             &&com.wildfire.gui.ChatImages.hasClipboardImage()) {chooseChatImage(true);return true;}
         if (heldSticker != null) {
-            if (event.key() == 256) { heldSticker = null; heldStickerButton = null; stickerPreviewShown = false; }
+            if (event.key() == com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE) { heldSticker = null; heldStickerButton = null; stickerPreviewShown = false; }
             return true;
         }
-        if (reactionPicker && event.key() == 256) { reactionPicker = false; updateWidgets(); return true; }
+        if (reactionPicker && event.key() == com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE) { reactionPicker = false; updateWidgets(); return true; }
         if (tab == 2 && conversationPartner != null && messageInput != null
-            && messageInput.isFocused() && (event.key() == 257 || event.key() == 335)) {
+            && messageInput.isFocused() && (event.key() == com.mojang.blaze3d.platform.InputConstants.KEY_RETURN || event.key() == com.mojang.blaze3d.platform.InputConstants.KEY_NUMPADENTER)) {
             sendPrivateMessage();
             return true;
         }

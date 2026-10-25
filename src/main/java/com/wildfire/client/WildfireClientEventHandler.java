@@ -196,7 +196,12 @@ public final class WildfireClientEventHandler {//TODO: Move other classes to a c
                 else if ("notification".equals(action.kind())) {
                     var center=new com.wildfire.gui.screen.NotificationCenterScreen(screen);
                     center.openNotification(action.target()); client.gui.setScreen(center);
-                } else if("stream".equals(action.kind()))net.minecraft.util.Util.getPlatform().openUri(action.target());
+                } else if("stream".equals(action.kind())) {
+                    try {
+                        java.awt.Desktop.getDesktop().browse(java.net.URI.create(action.target()));
+                    } catch (Exception ignored) {
+                    }
+                }
                 ModUpdate.dismissPopup(displayedId[0]);
             },ModUpdate::popupControlsReveal);
             Button secondary = new com.wildfire.gui.ToastControlButton(116, 0, 106, 20, Component.empty(), button -> {

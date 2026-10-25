@@ -1,7 +1,7 @@
-loader_version = "0.19.3"
+loader_version = "0.19.5"
 
 # Mod Properties
-mod_version = "0.1.0-beta.222"
+mod_version = "0.1.0-beta.9"
 maven_group = "com.wildfiregender.main"
 archives_base_name = "SpringPlusCosmetics-fabric"
 
@@ -15,9 +15,9 @@ publish.type = "BETA"
 # TODO setup curseforge publishing
 publish.modrinth = "bcOsQHnC"
 
-["26.2"]
-    dependencies.minecraft = ">=26.2 <26.3"
-    dependencies.fabric = "0.156.0+26.2"
-    publish.version_title = "26.2"
-    publish.min_version = "26.2"
+["26.3"]
+    dependencies.minecraft = ">=26.3 <26.4"
+    dependencies.fabric = "0.163.0+26.3"
+    publish.version_title = "26.3 Beta 1"
+    publish.min_version = "26.3"
     publish.max_version = "latest"

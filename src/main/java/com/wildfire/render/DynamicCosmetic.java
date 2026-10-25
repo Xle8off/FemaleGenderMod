@@ -214,8 +214,6 @@ public final class DynamicCosmetic {
         float inflate=definition.has("inflate")?definition.get("inflate").getAsFloat():0;
         for(int i=0;i<cube.polygons.length;i++){
             var polygon=cube.polygons[i];var normal=polygon.normal();
-            // Bedrock's X axis is mirrored relative to Blockbench's viewport:
-            // its east face is ModelPart's negative-X face and vice versa.
             String face=normal.x()>0.5f?"west":normal.x()<-0.5f?"east":
                 normal.y()<-0.5f?"up":normal.y()>0.5f?"down":normal.z()<0?"north":"south";
             if(!faces.has(face)){

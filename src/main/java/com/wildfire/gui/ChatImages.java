@@ -111,7 +111,7 @@ public final class ChatImages {
         Minecraft.getInstance().execute(()->{
             Identifier texture=Identifier.fromNamespaceAndPath("appearance_sync","chat_image/"+key);
             var manager=Minecraft.getInstance().getTextureManager();manager.register(texture,new DynamicTexture(()->"Chat image",nativeImage){
-                {sampler=com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getClampToEdge(com.mojang.blaze3d.textures.FilterMode.LINEAR);}
+                {sampler=com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getClampToEdge(com.mojang.renderpearl.api.textures.FilterMode.LINEAR);}
             });
             textures.put(key,new Texture(texture,small.getWidth(),small.getHeight()));loading.remove(key);
             while(textures.size()>24||textures.values().stream().mapToLong(t->4L*t.width()*t.height()).sum()>96L*1024*1024){String oldest=textures.keySet().iterator().next();manager.release(textures.remove(oldest).id());}
@@ -131,7 +131,7 @@ public final class ChatImages {
         graphics.blit(RenderPipelines.GUI_TEXTURED,texture.id(),x+(size-w)/2,y+(size-h)/2,0f,0f,w,h,texture.width(),texture.height(),texture.width(),texture.height(),ChatMotion.color(0xFFFFFFFF,opacity));
     }
     public static void view(Screen parent,String id){
-        
+
         Minecraft.getInstance().gui.setScreen(new Screen(Component.literal("Изображение")){
             @Override protected void init(){addRenderableWidget(FlatButtons.builder(Component.literal("Назад"),b->onClose()).bounds(width/2-50,height-30,100,20).build());}
             @Override public void extractRenderState(GuiGraphicsExtractor g,int mx,int my,float delta){g.fill(0,0,width,height,0xEE151A22);int size=Math.max(1,Math.min(width-24,height-55));drawPreview(g,id,(width-size)/2,10,size);super.extractRenderState(g,mx,my,delta);}

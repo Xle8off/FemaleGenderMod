@@ -17,7 +17,7 @@ public final class OverheadCameraTextures {
     private static final class CameraTexture extends DynamicTexture {
         CameraTexture(NativeImage image){
             super(()->"SpringPlus overhead camera",image);
-            sampler=com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getClampToEdge(com.mojang.blaze3d.textures.FilterMode.LINEAR);
+            sampler=com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getClampToEdge(com.mojang.renderpearl.api.textures.FilterMode.LINEAR);
         }
     }
     private OverheadCameraTextures(){}

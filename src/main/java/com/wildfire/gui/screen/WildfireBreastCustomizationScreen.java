@@ -187,7 +187,7 @@ public final class WildfireBreastCustomizationScreen extends BaseWildfireScreen 
         });
         purchaseButton = addButton(builder -> builder.message(() -> Component.literal("Купить на сайте"))
             .position(controlsX + 30, y + 223).size(controlsW - 60, 19)
-            .onPress(_ -> Util.getPlatform().openUri("https://donate.springplus.net"))
+            .onPress(_ -> org.lwjgl.sdl.SDLMisc.SDL_OpenURL("https://donate.springplus.net"))
             .renderer((button, graphics, mouseX, mouseY, delta) -> {
                 graphics.fill(button.getX(), button.getY(), button.getRight(), button.getBottom(),
                     button.isHoveredOrFocused() ? 0xDD65445F : 0xCC48364B);

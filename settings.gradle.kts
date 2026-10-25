@@ -34,8 +34,8 @@ stonecutter {
     // lot of control over the actual build scripts
 
     shared {
-        version("26.2")
-        vcsVersion = "26.2"
+        version("26.3")
+        vcsVersion = "26.3"
     }
 
     create(rootProject)

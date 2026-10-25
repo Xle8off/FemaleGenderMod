@@ -65,7 +65,7 @@ public final class MenuArmBend {
             var elbow=MenuArmPose.sample(5f,entry.angle);
             float cos=(float)Math.cos(entry.angle),sin=(float)Math.sin(entry.angle);
             pose.translate(0,(elbow.y()-5f*cos)/16f,(elbow.z()-5f*sin)/16f);
-            pose.mulPose(com.mojang.math.Axis.XP.rotation(entry.angle));
+            pose.rotate(com.mojang.math.Axis.XP.rotation(entry.angle));
             return;
         }
     }

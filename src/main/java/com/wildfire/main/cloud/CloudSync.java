@@ -24,7 +24,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.mojang.authlib.HttpAuthenticationService;
+import com.mojang.authlib.HttpDiscoveryService;
 import com.mojang.authlib.exceptions.AuthenticationException;
 import com.mojang.serialization.JsonOps;
 import com.mojang.util.InstantTypeAdapter;
@@ -246,7 +246,7 @@ public final class CloudSync {
 
                 WildfireGender.LOGGER.info("Obtaining new authentication token from the cloud sync server");
                 SyncLog.add(WildfireLang.SYNC_LOG_AUTH_SYNC);
-                var query = HttpAuthenticationService.buildQuery(Map.of("serverId", serverId, "username", session.getName()));
+                var query = HttpDiscoveryService.buildQuery(Map.of("serverId", serverId, "username", session.getName()));
                 var uri = URI.create(getCloudServer() + "/auth?" + query);
                 var request = createRequest(uri).GET().build();
                 var response = CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString()).join();

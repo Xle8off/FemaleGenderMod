@@ -21,11 +21,17 @@ repositories {
     maven("https://repo.redlance.org/public") { name = "Redlance" }
 }
 
+val dialogNatives by configurations.creating
+
 dependencies {
+    include(implementation("org.lwjgl:lwjgl-tinyfd:3.4.1")!!)
+    for (platform in listOf("windows", "windows-arm64", "linux", "macos", "macos-arm64")) {
+        dialogNatives("org.lwjgl:lwjgl-tinyfd:3.4.1:natives-$platform")
+    }
     // Preserve the shared moderation integration already maintained in this repository.
-    if (sc.current.version == "26.2") {
+    if (sc.current.version == "26.3") {
         include(implementation("dev.aeltorx.inflow:client:1.0.49")!!)
-        implementation("net.fabricmc.fabric-api:fabric-api:0.156.0+26.2")
+        implementation("net.fabricmc.fabric-api:fabric-api:0.163.0+26.3")
     }
     // Lazy-loaded only from the camera setup window; no browser or automatic capture.
     include(implementation("dev.onvoid.webrtc:webrtc-java:0.19.0") { isTransitive = false })
@@ -63,6 +69,7 @@ dependencies {
 }
 
 tasks.processResources {
+    from(provider { dialogNatives.files.map { zipTree(it) } }) { include("**/*.dll", "**/*.so", "**/*.dylib") }
     val props = mapOf(
         "version" to project.version as String,
         "minecraft_dependency" to sc.properties["dependencies.minecraft"],

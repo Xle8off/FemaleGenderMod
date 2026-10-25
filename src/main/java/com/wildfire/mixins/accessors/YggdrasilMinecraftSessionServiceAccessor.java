@@ -18,12 +18,12 @@
 
 package com.wildfire.mixins.accessors;
 
-import com.mojang.authlib.yggdrasil.YggdrasilMinecraftSessionService;
+import com.mojang.authlib.services.MinecraftServicesSessionService;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 /// @apiNote Only applied on the client side
-@Mixin(YggdrasilMinecraftSessionService.class)
+@Mixin(MinecraftServicesSessionService.class)
 public interface YggdrasilMinecraftSessionServiceAccessor {
-    @Accessor String getBaseUrl();
+    @Accessor("discoveryService") com.mojang.authlib.services.MinecraftServicesDiscoveryService getDiscoveryService();
 }

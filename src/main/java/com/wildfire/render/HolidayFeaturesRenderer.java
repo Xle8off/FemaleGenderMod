@@ -71,7 +71,7 @@ public class HolidayFeaturesRenderer extends RenderLayer<AvatarRenderState, Play
         }
 
         matrixStack.scale(1.145f, 1.145f, 1.145f);
-        renderQueue.submitModel(SANTA_HAT_MODEL, state, matrixStack, renderLayer, light, overlay, state.outlineColor, null);
+        renderQueue.submitModel(SANTA_HAT_MODEL, state, matrixStack, renderLayer, light, overlay, 0xFFFFFFFF, null, state.outlineColor);
         matrixStack.popPose();
     }
 

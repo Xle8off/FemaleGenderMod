@@ -27,7 +27,7 @@ public final class ScreenWorldRenderer {
    var texture=selected&&BrowserRuntime.running()?BrowserRuntime.texture():null;
    var a=local(g,ScreenSurface.point(g,0,0));var b=local(g,ScreenSurface.point(g,0,g.height()));var d=local(g,ScreenSurface.point(g,g.width(),0));var e=local(g,ScreenSurface.point(g,g.width(),g.height()));
    pose.pushPose();pose.translate(g.x()-camera.pos.x,g.y()-camera.pos.y,g.z()-camera.pos.z);
-   out.submitCustomGeometry(pose,RenderTypes.textBackground(),(matrix,v)->{
+   out.submitCustomGeometry(pose,RenderTypes.debugQuads(),(matrix,v)->{
     plain(matrix,v,a);plain(matrix,v,b);plain(matrix,v,e);plain(matrix,v,d);
    });
    if(texture!=null){

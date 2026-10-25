@@ -80,7 +80,7 @@ abstract class PublicChatScreenMixin extends Screen {
         // Consume arrows here, after giving native/mention suggestions first priority.
         if(key>=262&&key<=265){
             if(!commandSuggestions.keyPressed(event)){
-                if(key==264||key==265)moveInHistory(key==265?-1:1);
+                if(key==com.mojang.blaze3d.platform.InputConstants.KEY_DOWN||key==com.mojang.blaze3d.platform.InputConstants.KEY_UP)moveInHistory(key==com.mojang.blaze3d.platform.InputConstants.KEY_UP?-1:1);
                 else if(input.getValue().startsWith("/"))input.keyPressed(event);
                 else springplus$controls.composerKey(event);
             }
